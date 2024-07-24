@@ -1,1594 +1,184 @@
-const githubRepo = 'https://raw.githubusercontent.com/kolos26/GEOFS-LiverySelector/main';
+//consistency
+ document.addEventListener("keydown", function(e) {
 
-let liveryobj;
-let multiplayertexture;
-let origHTMLs = {};
-let uploadHistory = [];
+	if (e.keyCode == 220) {
 
-(function init() {
+weather.contrailTemperatureThreshold = 100;
 
-    // styles
-    fetch(`${githubRepo}/styles.css`).then(async data => {
-        const styleTag = createTag('style',{type:'text/css'});
-        styleTag.innerHTML = await data.text();
-        document.head.appendChild(styleTag);
-    });
-    appendNewChild(document.head, 'link', {rel: 'stylesheet', href: 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css'});
+weather.contrailAltitude = 0;
 
-    // Panel for list
-    const listDiv = appendNewChild(document.querySelector('.geofs-ui-left'), 'div', {
-        id: 'listDiv',
-        class: 'geofs-list geofs-toggle-panel livery-list geofs-visible',
-        'data-noblur': 'true',
-        'data-onshow': '{geofs.initializePreferencesPanel()}',
-        'data-onhide': '{geofs.savePreferencesPanel()}'
-    });
-    listDiv.innerHTML = generateListHTML();
+let whiteSmokeEmitter = new geofs.fx.ParticleEmitter({
 
-    // Button for panel
-    const geofsUiButton = document.querySelector('.geofs-ui-bottom');
-    const insertPos = geofs.version >= 3.6 ? 4 : 3;
-    geofsUiButton.insertBefore(generatePanelButtonHTML(), geofsUiButton.children[insertPos]);
+            anchor: {
 
-    //remove original buttons
-    const origButtons = document.getElementsByClassName('geofs-liveries geofs-list-collapsible-item');
-    Object.values(origButtons).forEach(btn => btn.parentElement.removeChild(btn));
+                        worldPosition: [0, 0, 0]
 
-    //Load liveries (@todo: consider moving to listLiveries)
-    fetch(`${githubRepo}/livery.json`).then(handleLiveryJson);
+                    },
 
-    // Start multiplayer (WIP)
-    //setInterval(updateMultiplayer, 5000);
-})();
+            duration: 1E10,
 
-/**
- * @param {Response} data
- */
-async function handleLiveryJson(data) {
-    liveryobj = await data.json();
+            rate: .05,
 
-    // mark aircraft with livery icons
-    Object.keys(liveryobj.aircrafts).forEach(aircraftId => {
-        const element = document.querySelector(`[data-aircraft='${aircraftId}']`);
-        // save original HTML for later use (reload, aircraft change, etc..)
-        if (!origHTMLs[aircraftId]) {
-            origHTMLs[aircraftId] = element.innerHTML;
-        }
+            life: 4E4,
 
-        // use orig HTML to concatenate so theres only ever one icon
-        element.innerHTML = origHTMLs[aircraftId] +
-            createTag('img', {src: `${githubRepo}/liveryselector-logo-small.svg`, height: '30px'}).outerHTML;
-    });
-}
+            easing: "easeOutQuart",
 
-/**
- * Triggers GeoFS API to load texture
- *
- * @param {string[]} texture
- * @param {number[]} index
- * @param {number[]} parts
- */
-function loadLivery(texture, index, parts) {
-    //change livery
-    for (let i = 0; i < texture.length; i++) {
-        const model3d = geofs.aircraft.instance.definition.parts[parts[i]]['3dmodel'];
-        if (geofs.version == 2.9) {
-            geofs.api.Model.prototype.changeTexture(texture[i], index[i], model3d);
-        } else if (geofs.version >= 3.0 && geofs.version <= 3.7) {
-            geofs.api.changeModelTexture(model3d._model, texture[i], index[i]);
-        } else {
-            geofs.api.changeModelTexture(model3d._model, texture[i], {index:index[i]});
-        }
-        //change multiplayer texture
-        multiplayertexture = texture;
-    }
-}
+            startScale: .01,
 
-/**
- * Load liveries from text input fields
- */
-function inputLivery() {
-    const airplane = getCurrentAircraft();
-    const textures = airplane.liveries[0].texture;
-    const inputFields = document.getElementsByName('textureInput');
-    if (textures.filter(x => x === textures[0]).length === textures.length) { // the same texture is used for all indexes and parts
-        const texture = inputFields[0].value;
-        loadLivery(Array(textures.length).fill(texture), airplane.index, airplane.parts);
-    } else {
-        const texture = [];
-        inputFields.forEach(e => texture.push(e.value));
-        loadLivery(texture, airplane.index, airplane.parts);
-    }
-}
+            endScale: .01,
 
-function sortList(id) {
-    const list = domById(id);
-    let i, switching, b, shouldSwitch;
-    switching = true;
-    while (switching) {
-        switching = false;
-        b = list.getElementsByTagName('LI');
-        for (i = 0; i < (b.length - 1); i++) {
-            shouldSwitch = false;
-            if (b[i].innerHTML.toLowerCase() > b[i + 1].innerHTML.toLowerCase()) {
-                shouldSwitch = true;
-                break;
-            }
-        }
-        if (shouldSwitch) {
-            b[i].parentNode.insertBefore(b[i + 1], b[i]);
-            switching = true;
-        }
-    }
-}
+            randomizeStartScale: .05,
 
-/**
- * Generate main livery list
- */
-function listLiveries() {
-    domById('liverylist').innerHTML = '';
+            randomizeEndScale: .15,
 
-    const airplane = getCurrentAircraft();
-    airplane.liveries.forEach(function (e) {
-        let listItem = appendNewChild(domById('liverylist'), 'li', {
-            id: [geofs.aircraft.instance.id, e.name, 'button'].join('_'),
-            class: 'livery-list-item'
-        });
-        listItem.onclick = () => loadLivery(e.texture, airplane.index, airplane.parts);
-        listItem.innerHTML = e.name;
-        if (e.credits && e.credits.length) {
-            listItem.innerHTML += `<small>by ${e.credits}</small>`;
-        }
+            startOpacity: 0.9,
 
-        appendNewChild(listItem, 'span', {
-            id: [geofs.aircraft.instance.id, e.name].join('_'),
-            class: 'fa fa-star nocheck',
-            onclick: 'LiverySelector.star(this)'
-        });
-    });
-    sortList('liverylist');
-    loadFavorites();
-    sortList('favorites');
-    addCustomForm();
-}
+            endOpacity: 1E-5,
 
-function loadFavorites() {
-    if (localStorage.getItem('favorites') === null) {
-        localStorage.favorites = '';
-    }
-    domById('favorites').innerHTML = '';
-    const list = localStorage.favorites.split(',');
-    const airplane = geofs.aircraft.instance.id;
-    list.forEach(function (e) {
-        if ((airplane == e.slice(0, airplane.length)) && (e.charAt(airplane.length) == '_')) {
-            star(domById(e));
-        }
-    });
-}
+            startRotation: "random",
 
-function addCustomForm() {
-    document.querySelector('#livery-custom-tab-upload .upload-fields').innerHTML = '';
-    document.querySelector('#livery-custom-tab-direct .upload-fields').innerHTML = '';
-    const airplane = getCurrentAircraft();
-    const textures = airplane.liveries[0].texture;
-    const placeholders = airplane.labels;
-    if (textures.filter(x => x === textures[0]).length === textures.length) { // the same texture is used for all indexes and parts
-        createUploadButton(placeholders[0]);
-        createDirectButton(placeholders[0]);
-    } else {
-        placeholders.forEach((placeholder,i)=>{
-            createUploadButton(placeholder);
-            createDirectButton(placeholder,i);
-        });
-    }
-    // click first tab to refresh button status
-    document.querySelector('.livery-custom-tabs li').click();
-}
+            texture: "whitesmoke"
 
-function search(text) {
-    if (text === '') {
-        listLiveries();
-    } else {
-        const liveries = domById('liverylist').childNodes;
-        liveries.forEach(function (e) {
-            const found = e.innerText.toLowerCase().includes(text.toLowerCase());
-            e.style.display = found ? 'block' : 'none';
-        });
-    }
-}
+        })
 
-/**
- * Mark as favorite
- *
- * @param {HTMLElement} element
- */
-function star(element) {
-    const e = element.classList;
-    const elementId = [element.id, 'favorite'].join('_');
-    if (e == 'fa fa-star nocheck') {
-        const btn = domById([element.id, 'button'].join('_'));
-        const fbtn = appendNewChild(domById('favorites'), 'li', { id: elementId, class: 'livery-list-item' });
-        fbtn.onclick = btn.onclick;
-        fbtn.innerText = btn.firstChild.data;
+   document.addEventListener("keydown", function(e) {
 
-        let list = localStorage.favorites.split(',');
-        list.push(element.id);
-        list = [...new Set(list)];
-        localStorage.favorites = list;
+	   if (e.keyCode == 191) {
 
-    } else if (e == 'fa fa-star checked') {
-        domById('favorites').removeChild(domById(elementId));
-        const list = localStorage.favorites.split(',');
-        const index = list.indexOf(element.id);
-        if (index !== -1) {
-            list.splice(index, 1);
-        }
-        localStorage.favorites = list;
-    }
-    //style animation
-    e.toggle('checked');
-    e.toggle('nocheck');
-}
+	whiteSmokeEmitter.destroy()
 
-/**
- * @param {string} id
- */
-function createUploadButton(id) {
-    const customDiv = document.querySelector('#livery-custom-tab-upload .upload-fields');
-    appendNewChild(customDiv, 'input', {
-        type: 'file',
-        onchange: 'LiverySelector.uploadLivery(this)'
-    });
-    appendNewChild(customDiv, 'input', {
-        type: 'text',
-        name: 'textureInput',
-        class: 'mdl-textfield__input address-input',
-        placeholder: id,
-        id: id
-    });
-    appendNewChild(customDiv, 'br');
-}
+	weather.contrailTemperatureThreshold = -30;
 
-/**
- * @param {string} id
- * @param {number} i
- */
-function createDirectButton(id,i) {
-    const customDiv = document.querySelector('#livery-custom-tab-direct .upload-fields');
-    appendNewChild(customDiv, 'input', {
-        type: 'file',
-        onchange: 'LiverySelector.loadLiveryDirect(this,'+i+')'
-    });
-    appendNewChild(customDiv, 'span').innerHTML = id;
-    appendNewChild(customDiv, 'br');
-}
+   weather.contrailAltitude = 1E4;
 
-/**
- * @param {HTMLInputElement} fileInput
- * @param {number} i
- */
-function loadLiveryDirect(fileInput, i) {
-    const reader = new FileReader();
-    reader.addEventListener('load', (event) => {
-        const airplane = getCurrentAircraft();
-        const textures = airplane.liveries[0].texture;
-        const newTexture = event.target.result;
-        if (i === undefined) {
-            loadLivery(Array(textures.length).fill(newTexture), airplane.index, airplane.parts);
-        } else {
-            // doesnt use loadLivery so no multiplayer, direct doesn't work it anyway
-            geofs.api.changeModelTexture(
-                geofs.aircraft.instance.definition.parts[airplane.parts[i]]["3dmodel"]._model,
-                newTexture,
-                {index:airplane.index[i]}
-            );
-        }
-        fileInput.value = null;
-    });
-    // read file (if there is one)
-    fileInput.files.length && reader.readAsDataURL(fileInput.files[0]);
-}
+		}
 
-/**
- * @param {HTMLInputElement} fileInput
- */
-function uploadLivery(fileInput) {
-    if (!fileInput.files.length)
-        return;
-    if (!localStorage.imgbbAPIKEY) {
-        alert('No imgbb API key saved! Check API tab');
-        fileInput.value = null;
-        return;
-    }
-    const form = new FormData();
-    form.append('image', fileInput.files[0]);
-    if (localStorage.liveryAutoremove)
-        form.append('expiration', (new Date()/1000) * 60 * 60);
+	})
 
-    const settings = {
-        'url': `https://api.imgbb.com/1/upload?key=${localStorage.imgbbAPIKEY}`,
-        'method': 'POST',
-        'timeout': 0,
-        'processData': false,
-        'mimeType': 'multipart/form-data',
-        'contentType': false,
-        'data': form
-    };
-
-    $.ajax(settings).done(function (response) {
-        const jx = JSON.parse(response);
-        console.log(jx.data.url);
-        fileInput.nextSibling.value = jx.data.url;
-        fileInput.value = null;
-        uploadHistory.push(jx.data);
-    });
-}
-
-function handleCustomTabs(e){
-    e = e || window.event;
-    const src = e.target || e.srcElement;
-    const tabId = src.innerHTML.toLocaleLowerCase();
-    // iterate all divs and check if it was the one clicked, hide others
-    domById('customDiv').querySelectorAll(':scope > div').forEach(tabDiv => {
-        if (tabDiv.id != ['livery-custom-tab', tabId].join('-')) {
-            tabDiv.style.display =  'none';
-            return;
-        }
-        tabDiv.style.display = '';
-        // special handling for each tab, could be extracted
-        switch (tabId) {
-            case 'upload': {
-                const fields = tabDiv.querySelectorAll('input[type="file"]');
-                fields.forEach(f=>localStorage.imgbbAPIKEY ? f.classList.remove('err') : f.classList.add('err'));
-            } break;
-
-            case 'download': {
-                reloadDownloadsForm(tabDiv);
-            } break;
-
-            case 'api': {
-                reloadSettingsForm();
-            } break;
-        }
-    });
-
-}
-
-/**
- * reloads texture files for current airplane
- *
- * @param {HTMLElement} tabDiv
- */
-function reloadDownloadsForm(tabDiv) {
-    const airplane = getCurrentAircraft();
-    const liveries = airplane.liveries;
-    const defaults = liveries[0];
-    const fields = tabDiv.querySelector('.download-fields');
-    fields.innerHTML = '';
-    liveries.forEach((livery,liveryNo) => {
-        appendNewChild(fields, 'h7').innerHTML = livery.name;
-        const wrap = appendNewChild(fields, 'div');
-        livery.texture.forEach((href,i) => {
-            if (liveryNo>0 && href == defaults.texture[i]) return;
-            const link = appendNewChild(wrap,'a',{href,target:'_blank',
-                class:"mdl-button mdl-button--raised mdl-button--colored"
-            });
-            link.innerHTML = airplane.labels[i];
-        });
-    });
-}
-
-/**
- * reloads settings form after changes
- */
-function reloadSettingsForm() {
-    const apiInput = domById('livery-setting-apikey');
-    apiInput.placeholder = localStorage.imgbbAPIKEY ?
-        'API KEY SAVED ✓ (type CLEAR to remove)' :
-        'API KEY HERE';
-
-    const removeCheckbox = domById('livery-setting-remove');
-    removeCheckbox.checked = (localStorage.liveryAutoremove==1);
-}
-
-/**
- * saves setting, gets setting key from event element
- *
- * @param {HTMLElement} element
- */
-function saveSetting(element) {
-    const id = element.id.replace('livery-setting-','');
-    switch (id) {
-        case 'apikey': {
-            if (element.value.length) {
-                if (element.value.trim().toLowerCase() == 'clear') {
-                    delete localStorage.imgbbAPIKEY;
-                } else {
-                    localStorage.imgbbAPIKEY = element.value.trim();
-                }
-                element.value = '';
-            }
-        } break;
-
-        case 'remove': {
-            localStorage.liveryAutoremove = element.checked ? '1' : '0';
-        } break;
-    }
-    reloadSettingsForm();
-}
-
-/**
- * @returns {object} current aircraft from liveryobj
- */
-function getCurrentAircraft() {
-    return liveryobj.aircrafts[geofs.aircraft.instance.id];
-}
-
-function updateMultiplayer() {
-    Object.values(multiplayer.visibleUsers).forEach(function (e) {
-        geofs.api.changeModelTexture(multiplayer.visibleUsers[e.id].model, multiplayertexture, 0);
-    });
-}
-
-/******************* Utilities *********************/
-
-/**
- * @param {string} id Div ID to toggle, in addition to clicked element
- */
-function toggleDiv(id) {
-    const div = domById(id);
-    const target = window.event.target;
-    if (target.classList.contains('closed')) {
-        target.classList.remove('closed');
-        div.style.display='';
-    } else {
-        target.classList.add('closed');
-        div.style.display='none';
-    }
-}
-
-/**
- * Create tag with <name attributes=...
- *
- * @param {string} name
- * @param {object} attributes
- * @returns {HTMLElement}
- */
-function createTag(name, attributes = {}) {
-    const el = document.createElement(name);
-    Object.keys(attributes).forEach(k => el.setAttribute(k, attributes[k]));
-
-    return el;
-}
-
-/**
- * Creates a new element <tagName attributes=...
- * appends to parent and returns the child for later access
- *
- * @param {HTMLElement} parent
- * @param {string} tagName
- * @param {object} attributes
- * @param {number} pos insert in Nth position (default append)
- * @returns {HTMLElement}
- */
-function appendNewChild(parent, tagName, attributes = {}, pos = -1) {
-    const child = createTag(tagName, attributes);
-    if (pos < 0) {
-        parent.appendChild(child);
-    } else {
-        parent.insertBefore(child, parent.children[pos]);
-    }
-
-    return child;
-}
-
-/**
- * @param {string} elementId
- * @returns {HTMLElement}
- */
-function domById(elementId) {
-    return document.getElementById(elementId);
-}
-
-/******************* HTML & CSS Templates *********************/
-
-/**
- * @returns {string} HTML template for main panel
- */
-function generateListHTML() {
-    return `
-        <h3><img src="${githubRepo}/liveryselector-logo.svg" class="livery-title" title="LiverySelector" /></h3>
-
-        <div class="livery-searchbar mdl-textfield mdl-js-textfield geofs-stopMousePropagation geofs-stopKeyupPropagation">
-            <input class="mdl-textfield__input address-input" type="text" placeholder="Search liveries" onkeyup="LiverySelector.search(this.value)" id="searchlivery">
-            <label class="mdl-textfield__label" for="searchlivery">Search liveries</label>
-        </div>
-
-        <h6 onclick="LiverySelector.toggleDiv('favorites')">Favorite liveries</h6>
-        <ul id="favorites" class="geofs-list geofs-visible"></ul>
-
-        <h6 onclick="LiverySelector.toggleDiv('liverylist')">Available liveries</h6>
-        <ul id="liverylist" class=" geofs-list geofs-visible"></ul>
-
-        <h6 onclick="LiverySelector.toggleDiv('customDiv')" class="closed">Load external livery</h6>
-        <div id="customDiv" class="mdl-textfield mdl-js-textfield geofs-stopMousePropagation geofs-stopKeyupPropagation" style="display:none;">
-            <ul class="livery-custom-tabs" onclick="LiverySelector.handleCustomTabs()">
-                <li>Upload</li>
-                <li>Direct</li>
-                <li>Download</li>
-                <li>API</li>
-            </ul>
-            <div id="livery-custom-tab-upload" style="display:none;">
-                <div>Paste URL or upload image to generate imgbb URL</div>
-                <div class="upload-fields"></div>
-                <button class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored" onclick="LiverySelector.inputLivery()">Load livery</button>
-            </div>
-            <div id="livery-custom-tab-direct" style="display:none;">
-                <div>Load texture directly in client, no upload.</div>
-                <div class="upload-fields"></div>
-            </div>
-            <div id="livery-custom-tab-download" style="display:none;">
-                <div>Download textures for current Airplane:</div>
-                <div class="download-fields"></div>
-            </div>
-            <div id="livery-custom-tab-api" style="display:none;">
-              <div>
-                <label for="livery-setting-apikey">Paste your imgbb API key here (<a href="https://api.imgbb.com" target="_blank">get key</a>)</label>
-                <input type="text" id="livery-setting-apikey" class="mdl-textfield__input address-input" onchange="LiverySelector.saveSetting(this)">
-                <br>
-                <input type="checkbox" id="livery-setting-remove" onchange="LiverySelector.saveSetting(this)">
-                <label for="livery-setting-remove">Remove uploaded files after an hour</label>
-              </div>
-            </div>
-        </div>
-`;
-}
-
-/**
- * @returns {HTMLElement} HTML template for main menu livery button
- */
-function generatePanelButtonHTML() {
-    const liveryButton = createTag('button', {
-        title: 'Change livery',
-        id: 'liverybutton',
-        class: 'mdl-button mdl-js-button geofs-f-standard-ui geofs-mediumScreenOnly',
-        onclick: 'LiverySelector.listLiveries()',
-        'data-toggle-panel': '.livery-list',
-        'data-tooltip-classname': 'mdl-tooltip--top',
-        'data-upgraded': ',MaterialButton'
-    });
-    liveryButton.innerHTML = 'LIVERY' + createTag('img', {src: `${githubRepo}/liveryselector-logo-small.svg`, height: '30px'}).outerHTML;
-
-    return liveryButton;
-}
-
-window.LiverySelector = {
-    liveryobj,
-    saveSetting,
-    toggleDiv,
-    loadLiveryDirect,
-    handleCustomTabs,
-    listLiveries,
-    star,
-    search,
-    inputLivery,
-    uploadLivery,
-};
-let debug = !1,
-	version = "Release 2.0c";
-async function multiliveries() {
-	console.log("loading...");
-	let e, i, t = {
-			window: void 0,
-			opened: !1
-		},
-		o = !1,
-		a = 0,
-		n = !1;
-	await fetch("https://raw.githubusercontent.com/Spice9/Geofs-Multiliveries/main/dependencies/liveries.json").then((e => e.json())).then((i => e = i));
-	void 0 === window.localStorage.mlFavorites && (window.localStorage.mlFavorites = []);
-	let s = window.localStorage.mlFavorites.split(","),
-		r = document.createElement("div"),
-		l = document.createElement("i");
-
-	function c(i, t) {
-		var o = i + 1e3;
-		if (debug && console.log("Livery Change Request as '" + i + "'"), t) n = !0,
-			function(e, i) {
-				let t = new geofs.api.Canvas({
-						width: 500
-					}),
-					o = t.context,
-					a = new Image;
-				a.src = i, a.crossOrigin = "anonymous", a.onload = function() {
-					t.canvas.width = a.width, t.canvas.height = a.height, o.drawImage(a, 0, 0);
-					let n = new Image;
-					n.src = "https://138772948-227015667470610340.preview.editmysite.com/uploads/1/3/8/7/138772948/overlay__1_.png", n.crossOrigin = "anonymous", n.onload = function() {
-						o.globalAlpha = .25;
-						let a = .25 * n.width,
-							s = .25 * n.height;
-						for (let i = -Math.abs(e); i < t.canvas.height; i += s)
-							for (let r = -Math.abs(e); r < t.canvas.width; r += a) o.drawImage(n, r, i, a, s);
-						let r = t.canvas.toDataURL("image/png");
-						if (debug && console.log(r), 4140 != geofs.aircraft.instance.id) geofs.api.setModelTextureFromCanvas(geofs.aircraft.instance.definition.parts[0]["3dmodel"]._model, t, 0);
-						else {
-							if (i.toString().includes("|")) {
-								var l = i.split("|"),
-									c = l[1],
-									d = l[2];
-								geofs.api.changeModelTexture(geofs.aircraft.instance.definition.parts[0]["3dmodel"]._model, c, 2), geofs.api.changeModelTexture(geofs.aircraft.instance.definition.parts[0]["3dmodel"]._model, d, 0), i = l[0]
-							}
-							geofs.api.setModelTextureFromCanvas(geofs.aircraft.instance.definition.parts[0]["3dmodel"]._model, t, 1)
-						}
-					}
-				}
-			}(a, i), debug && console.log("livery changed to " + i);
-		else if (i = e.aircraft[i].livery, n = !1, i.toString().includes("https://")) {
-			if (4140 == geofs.aircraft.instance.id) {
-				if (i.toString().includes("|")) {
-					var s = i.split("|"),
-						r = s[1],
-						l = s[2];
-					geofs.api.changeModelTexture(geofs.aircraft.instance.definition.parts[0]["3dmodel"]._model, r, 2), geofs.api.changeModelTexture(geofs.aircraft.instance.definition.parts[0]["3dmodel"]._model, l, 0), i = s[0]
-				}
-				return void geofs.api.changeModelTexture(geofs.aircraft.instance.definition.parts[0]["3dmodel"]._model, i, 1)
-			}
-			geofs.api.changeModelTexture(geofs.aircraft.instance.definition.parts[0]["3dmodel"]._model, i, 0), debug && console.log("livery changed to " + i)
-		} else geofs.aircraft.instance.loadLivery(i), debug && console.log("livery changed to " + i);
-		geofs.aircraft.instance.liveryId = o
 	}
-	r.id = "mlButton", r.className = "mdl-button mdl-js-button", r.innerText = "Multiliveries ", l.className = "material-icons geofs-ui-bottom-icon", l.innerText = "flight_land", r.appendChild(l), r.addEventListener("click", (function() {
-		if ("object" == typeof t.window && t.window.closed && (t.opened = !1), t.opened) return ui.notification.show("Panel is open in another window"), void(debug && console.log("Duplicate open attempt"));
-		t.window = window.open("https://ariakim-taiyo.github.io/MLUI/", "_blank", "height=1000,width=1500"), setTimeout((function() {
-			t.window.postMessage({
-				type: "favorites",
-				favorites: s
-			}, "*")
-		}), 2e3), t.opened = !0, t.window && !t.window.closed && void 0 !== t.window.closed || (ui.notification.show("Please allow popups on GeoFS"), debug && console.log("No Popup Permission"), t.opened = !1)
-	})), 0 == document.getElementsByClassName("fmc-btn").length ? document.getElementsByClassName("geofs-ui-bottom")[0].appendChild(r) : document.getElementsByClassName("fmc-prog-info")[0].appendChild(r), document.querySelectorAll("[data-aircraft]").forEach((function(i) {
-		e.ids.forEach((function(e) {
-			i.dataset.aircraft.includes(e) && (i.style.background = "linear-gradient(90deg, rgba(0,212,255,1) 0%, rgba(255,255,255,1) 15%, rgba(255,255,255,1) 100%)", i.innerHTML.includes("Multiliveries") || (i.innerHTML = i.innerHTML + " [Multiliveries Frame]"))
-		}))
-	})), window.addEventListener("message", (e => {
-		if (e = e.data, debug && console.log(e), "livery" === e.type && (e.custom ? c(e.livery, !0) : c(e.livery, !1)), "vehicle" === e.type && geofs.aircraft.instance.change(e.definition, null), "invalid" === e.type) return console.log("Invalid client, please use the original code."), void ui.notification.show("Invalid client, please use the original code.");
-		"test" === e.type && t.window.postMessage({
-			type: "answer",
-			payload: multiliveries.toString()
-		}, "*"), "offset" === e.type && (a = e.offset, n && c(e.livery, !0)), "favorites" === e.type && (s = e.favorites, window.localStorage.mlFavorites = s.join())
-	})), geofs.aircraft.Aircraft.prototype.change = function(e, i, o, a) {
-		var n = this;
-		if (e = e || this.aircraftRecord.id, o = this.load(e, this.getCurrentCoordinates(), o, a), isNaN(parseInt(e)) ? n.loadLivery(i) : o.then((function() {
-				n.loadLivery(i)
-			})), void 0 !== t) return isNaN(parseInt(e)) ? (geofs.api.analytics.event("aircraft", "EXTERNAL AIRCRAFT"), o) : (geofs.api.analytics.event("aircraft", geofs.aircraftList[e].name), o)
-	}, geofs.aircraft.Aircraft.prototype.load = function(i, t, a, n) {
-		if (!isNaN(parseInt(i)) || void 0 === e) {
-			o = !1;
-			r = this;
-			var s = geofs.aircraftList[i] && geofs.aircraftList[i].local ? geofs.aircraftList[i].path + "aircraft.json" : "/models/aircraft/load.php";
-			if (void 0 === o) return;
-			return new Promise((function(e, o) {
-				r.id != i || a ? (geofs.doPause(1), r.unloadAircraft(), $.ajax(s, {
-					data: {
-						id: i,
-						kc: geofs.killCache
-					},
-					dataType: "text",
-					success: function(o, s, l) {
-						if ("error" != s) {
-							geofs.aircraftList[i] && geofs.aircraftList[i].local && (o = JSON.stringify({
-								id: i,
-								name: geofs.aircraftList[i].name,
-								fullPath: geofs.aircraftList[i].path,
-								isPremium: !1,
-								isCommunity: !1,
-								definition: btoa(o)
-							}));
-							var c = r.parseRecord(o)
-						}
-						c ? (geofs.aircraftList[i] && !geofs.aircraftList[i].local && (r.fullPath = r.aircraftRecord.fullPath), r.id = i, r.init(c, t, a, n)) : r.loadDefault("Could not load aircraft file"), e()
-					},
-					error: function(e, t, a) {
-						i != geofs.aircraft.default && r.loadDefault("Could not load aircraft file" + a), o()
-					}
-				})) : e()
-			}))
+
+})
+
+ui.notification.show("Apply full throttle, then press Q to activate catapult.")
+
+setTimeout(() => {ui.notification.show("You must be in a carrier-capable aircraft and on the ground to use catapult.")}, 6900);
+
+if (geofs.aircraft.instance.id == 7){
+
+   document.addEventListener("keydown", function(e) {
+
+	   if (e.keyCode == 81) {
+
+	   if (geofs.animation.values.groundContact == 1){
+
+	   geofs.aircraft.instance.parts.engine.afterBurnerThrust = (geofs.aircraft.instance.parts.engine.afterBurnerThrust * 4)
+
+		let whiteSmokeEmitter = new geofs.fx.ParticleEmitter({
+
+            anchor: {
+
+                        worldPosition: [0, 0, -1]
+
+                    },
+
+            duration: 1E5,
+
+            rate: .05,
+
+            life: 4E4,
+
+            easing: "easeOutQuart",
+
+            startScale: .0005,
+
+            endScale: .0005,
+
+            randomizeStartScale: .05,
+
+            randomizeEndScale: .15,
+
+            startOpacity: 0.9,
+
+            endOpacity: 1E-5,
+
+            startRotation: "random",
+
+            texture: "whitesmoke"
+
+        })
+
+	   setTimeout(() => {geofs.aircraft.instance.parts.engine.afterBurnerThrust = (geofs.aircraft.instance.parts.engine.afterBurnerThrust / 4)}, 2000);
+
+		setTimeout(() => {whiteSmokeEmitter.destroy()}, 2250);
+
+	   }
+
+	   }
+
+   })
+
+}
+
+document.addEventListener("keydown", function(e) {
+
+	if (e.keyCode == 220) {
+
+weather.contrailTemperatureThreshold = 100;
+
+weather.contrailAltitude = 0;
+
+let whiteSmokeEmitter = new geofs.fx.ParticleEmitter({
+
+            anchor: {
+
+                        worldPosition: [0, 0, 0]
+
+                    },
+
+            duration: 1E10,
+
+            rate: .05,
+
+            life: 4E4,
+
+            easing: "easeOutQuart",
+
+            startScale: .01,
+
+            endScale: .01,
+
+            randomizeStartScale: .05,
+
+            randomizeEndScale: .15,
+
+            startOpacity: 0.9,
+
+            endOpacity: 1E-5,
+
+            startRotation: "random",
+
+            texture: "whitesmoke"
+
+        })
+
+   document.addEventListener("keydown", function(e) {
+
+	   if (e.keyCode == 191) {
+
+	whiteSmokeEmitter.destroy()
+
+	weather.contrailTemperatureThreshold = -30;
+
+   weather.contrailAltitude = 1E4;
+
 		}
-		var r;
-		o = !0, (r = this).unloadAircraft();
-		var l = r.parseRecord(JSON.stringify({
-			id: 42069,
-			name: "EXTERNAL AIRCRAFT",
-			fullPath: "EXTERNAL AIRCRAFT",
-			isPremium: 1,
-			isCommunity: !1,
-			definition: i
-		}));
-		setTimeout((function() {
-			r.init(l, t, a, n)
-		}), 1e3)
-	}, geofs.aircraft.Aircraft.prototype.addParts = function(e, i, t, n) {
-		for (geofs.aircraft.instance.parts = {}, t = t || 1, n = 0; n < e.length; n++) {
-			var s = e[n];
-			if (s.include) {
-				var r = geofs.includes[s.include];
-				$.extend(!0, s, r[0]);
-				for (var l = 1; l < r.length; l++) {
-					var c = Object.assign({}, r[l], {
-						parent: s.name
-					});
-					c.name = s.name + c.name, e.push(c)
-				}
-			}
-			if (s.indices && 0 < s.indices) {
-				for (l = 2; l <= s.indices; l++)(c = Object.assign({}, s, {
-					indices: null
-				})).name = s.name + l, c.node += l, e.push(c);
-				s.name += "1", s.node += "1"
-			}
-		}
-		if (void 0 !== a) {
-			for (n = 0; n < e.length; n++) {
-				for ((s = e[n]).points = s.points || {}, s.type = s.type || !1, s.brakesController = s.brakesController || !1, s.animations = s.animations || [], geofs.aircraft.instance.parts[s.name] = s, geofs.aircraft.instance.addOffsets(s, t), s.forceDirection && (s.forceDirection = AXIS_TO_INDEX[s.forceDirection]), s.rotation && (s.rotation = V3.toRadians(s.rotation)), s.modelOnlyRotation && (s.modelOnlyRotation = V3.toRadians(s.modelOnlyRotation)), s.scale = s.scale || [1, 1, 1], s.scale = V3.scale(s.scale, t), s.originalScale = s.scale, 4 > geofs.version && (s.gltf2model = null), (s.model || s.gltf2model) && (r = s.gltf2model ? s.gltf2model.url : s.model.url || s.model, i && "/" != r[0] && !s.include && (r = i + r), o && (r = s.model), l = {
-						shadows: s.shadows ? window[s.shadows] : SHADOWS_ALL,
-						incrementallyLoadTextures: !1
-					}, s.gltf2model && s.gltf2model.shader && (l.customShader = geofs.api.generateShader(s.model.shader, i)), s["3dmodel"] = new geofs.api.Model(r, l), this.models.push(s["3dmodel"]._model), s.renderer && (s.rendererInstance = new instruments.Renderer(s.renderer))), s.light && (s.lightBillboard = new geofs.fx.light(null, s.light, {
-						scale: .2
-					}), geofs.aircraft.instance.lights.push(s)), s.object3d = new Object3D(s), s.suspension && (s.suspension.length ? (s.suspension.origin = [s.collisionPoints[0][0], s.collisionPoints[0][1], s.collisionPoints[0][2] + s.suspension.length], r = s.suspension.length) : (s.suspension.origin = [s.collisionPoints[0][0], s.collisionPoints[0][1], 0], r = -s.collisionPoints[0][2]), s.suspension.restLength = r, "rotation" == s.suspension.motion ? (r = V3.length(s.collisionPoints[0]), r = Math.atan2(s.collisionPoints[0][0] / r, s.collisionPoints[0][2] / r), r = {
-						type: "rotate",
-						axis: s.suspension.axis || "Y",
-						value: s.name + "Suspension",
-						ratio: (0 > r ? r + HALF_PI : r - HALF_PI) * RAD_TO_DEGREES * (s.suspension.ratio || 1)
-					}) : r = {
-						type: "translate",
-						axis: s.suspension.axis || "Z",
-						value: s.name + "Suspension",
-						ratio: s.suspension.ratio || 1
-					}, s.animations.push(r), s.suspension.hardPoint = s.suspension.hardPoint || .5, s.points.suspensionOrigin = V3.dup(s.suspension.origin), geofs.aircraft.instance.suspensions.push(s)), l = 0; l < s.animations.length; l++)(r = s.animations[l]).ratio = r.ratio || 1, r.offset = r.offset || 0, r.currentValue = null, r.delay && (r.ratio /= 1 - Math.abs(r.delay)), "rotate" == r.type && (c = r.method || "rotate", "parent" == r.frame && (c = "rotateParentFrame"), r.rotationMethod = s.object3d[c + r.axis]), "translate" == r.type && (geofs.isArray(r.axis) || (r.axis = AXIS_TO_VECTOR[r.axis]));
-				if ("wheel" == s.type && (s.radius = s.radius || 1, s.arcDegree = s.radius * TWO_PI / 360, s.angularVelocity = 0, geofs.aircraft.instance.wheels.push(s)), "airfoil" == s.type && (s.lift = 0, geofs.aircraft.instance.airfoils.push(s), s.stalls = s.stalls || !1, s.stallIncidence = s.stallIncidence || 12, s.zeroLiftIncidence = s.zeroLiftIncidence || 16, s.aspectRatio = s.aspectRatio || DEFAULT_AIRFOIL_ASPECT_RATIO, s.aspectRatioCoefficient = s.aspectRatio / s.aspectRatio + 2), "engine" == s.type && (s.rpm = 0, geofs.aircraft.instance.definition.originalInertia = geofs.aircraft.instance.definition.engineInertia, geofs.aircraft.instance.engines.push(s), s.contrail && (s.contrailEmitter = new geofs.fx.ParticleEmitter({
-						off: !0,
-						anchor: s.points.contrailAnchor,
-						duration: 1e10,
-						rate: .05,
-						life: 4e4,
-						easing: "easeOutQuart",
-						startScale: .01,
-						endScale: .01,
-						randomizeStartScale: .02,
-						randomizeEndScale: .15,
-						startOpacity: .1,
-						endOpacity: 1e-5,
-						startRotation: "random",
-						texture: "whitesmoke"
-					}))), "balloon" == s.type && (s.temperature = s.initialTemperature || 0, s.coolingSpeed = s.coolingSpeed || 0, geofs.aircraft.instance.balloons.push(s)), s.collisionPoints) {
-					for (r = s.collisionPoints, l = geofs.aircraft.instance.definition.contactProperties[s.contactType || s.type], c = 0; c < r.length; c++) r[c].part = s, r[c].contactProperties = l, geofs.aircraft.instance.collisionPoints.push(r[c]);
-					s.volume || s.buoyancy || (s.volume = "airfoil" == s.type ? this.definition.mass / (400 * r.length) : .1, s.area = s.area || 0), s.dragVector = s.dragVector || [1, 1, 1], s.dragVector = V3.scale(s.dragVector, 1 / r.length)
-				}
-				s.volume && (s.buoyancy = WATER_DENSITY * GRAVITY * s.volume), s.controller && (geofs.aircraft.instance.controllers[s.controller.name] = s.controller)
-			}
-			for (n = 0; n < e.length; n++) "root" != (s = e[n]).name && (s.parent || (s.parent = "root"), geofs.aircraft.instance.parts[s.parent].object3d.addChild(s.object3d)), s.node && (s.object3d.setModel(s.object3d.findModelInAncestry()), s.manipulator && ("string" == typeof(i = s.manipulator) && (i = geofs.aircraft.instance.aircraftRecord.isCommunity ? null : geofs.utils.getFunctionFromString(i)), i && (geofs.aircraft.instance.manipulators[s.node] = i, controls.addNodeClickHandler(s.node, (function(e) {
-				controls.manipulator = geofs.aircraft.instance.manipulators[e], controls.mouse.down = 4
-			})))))
-		}
-	};
-	setInterval((function() {
-		Object.values(multiplayer.visibleUsers).forEach((function(i) {
-			if (i.lastUpdate.st.lv > 1e3) {
-				var t = e.aircraft[i.lastUpdate.st.lv - 1e3].mptx;
-				4140 == i.aircraft ? geofs.api.changeModelTexture(i.model._model, t, 1) : geofs.api.changeModelTexture(i.model._model, t, 0)
-			}
-		}))
-	}), 1e3);
-	console.log("Loaded!"), console.log("Version: " + version), await fetch("https://raw.githubusercontent.com/Spice9/Geofs-Multiliveries/main/dependencies/contributors.txt").then((e => e.json())).then((e => i = e));
-	var d = "";
-	setTimeout((function() {
-		console.log("Code by Spice9 and AriakimTaiyo, livery contributions by:"), i.forEach((function(e) {
-			"" === d ? d += e : d = i[i.length - 1] === e ? d + ", and " + e : d + ", " + e
-		})), console.log(d)
-	}), 1e3)
-}
-multiliveries();
-// ==UserScript==
-// @name         Geo-FS Pushback
-// @namespace    https://github.com/TotallyRealElonMusk/GeoFS-Pushback/new/main?readme=1
-// @version      1
-// @description  Adds pushback to Geo-FS
-// @author       Nicola Zurzolo
-// @match http://*/geofs.php*
-// @match https://*/geofs.php*
-// @run-at document-end
-// @grant        none
-// ==/UserScript==
 
-(function(_0x1de5ad, _0xf3f052) {
-    const _0x37794f = _0x5694,
-        _0x463e64 = _0x1de5ad();
-    while (!![]) {
-        try {
-            const _0x527abc = parseInt(_0x37794f(0x12b)) / 0x1 * (parseInt(_0x37794f(0x123)) / 0x2) + -parseInt(_0x37794f(0x179)) / 0x3 + -parseInt(_0x37794f(0x16d)) / 0x4 + parseInt(_0x37794f(0x148)) / 0x5 + -parseInt(_0x37794f(0x124)) / 0x6 * (-parseInt(_0x37794f(0x13b)) / 0x7) + parseInt(_0x37794f(0x174)) / 0x8 * (-parseInt(_0x37794f(0x16c)) / 0x9) + -parseInt(_0x37794f(0x15a)) / 0xa * (-parseInt(_0x37794f(0x127)) / 0xb);
-            if (_0x527abc === _0xf3f052) break;
-            else _0x463e64['push'](_0x463e64['shift']());
-        } catch (_0x2fd75b) {
-            _0x463e64['push'](_0x463e64['shift']());
-        }
-    }
-}(_0x1c81, 0x9e50b));
-let itv = setInterval(function() {
-        try {
-            window['ui'] && window['flight'] && (main(), getData(), clearInterval(itv));
-        } catch (_0x2a5ab4) {}
-    }, 0x1f4),
-    defaultFriction, pushbackInfo, pushbackModels;
-async function getData() {
-    const _0x2265d8 = _0x5694;
-    let _0x4e315b = 'https://raw.githubusercontent.com/TotallyRealElonMusk/GeoFS-Pushback/main/pushback%20data/pushback.json';
-    await fetch(_0x4e315b)[_0x2265d8(0x177)](_0x344890 => _0x344890[_0x2265d8(0x13c)]())[_0x2265d8(0x177)](_0x8f72e4 => pushbackInfo = _0x8f72e4);
-    let _0x195c67 = _0x2265d8(0x138);
-    await fetch(_0x195c67)[_0x2265d8(0x177)](_0x2810d0 => _0x2810d0['json']())['then'](_0x48ecd8 => pushbackModels = _0x48ecd8);
-}
+	})
 
-function _0x5694(_0x5742df, _0x1843c2) {
-    const _0x1c81ae = _0x1c81();
-    return _0x5694 = function(_0x569468, _0x1a137a) {
-        _0x569468 = _0x569468 - 0x123;
-        let _0x1fd04e = _0x1c81ae[_0x569468];
-        return _0x1fd04e;
-    }, _0x5694(_0x5742df, _0x1843c2);
-}
-
-function main() {
-    const _0x76c3fa = _0x5694;
-    window[_0x76c3fa(0x154)] = {}, pushback[_0x76c3fa(0x172)] = 0x0, pushback[_0x76c3fa(0x15d)] = 0x0, pushback[_0x76c3fa(0x170)] = function(_0x31fdd2) {
-        const _0x49007b = _0x76c3fa;
-        pushback[_0x49007b(0x172)] = _0x31fdd2, _0x31fdd2 === 0.5 ? _0x31fdd2 = 0x1 : null, _0x31fdd2 === -0.5 ? _0x31fdd2 = -0x1 : null, pushback[_0x49007b(0x12d)] && clearInterval(pushback['lockInt']), pushback['lockInt'] = setInterval(function() {
-            const _0x1aa8f1 = _0x49007b;
-            pushback[_0x1aa8f1(0x134)](_0x31fdd2);
-        });
-    }, pushback['stopBack'] = function() {
-        const _0x26af9d = _0x76c3fa;
-        clearInterval(pushback[_0x26af9d(0x12d)]), pushback[_0x26af9d(0x172)] = 0x0, pushback['pushBack'](0x0), clearInterval(pushback[_0x26af9d(0x12d)]);
-    }, pushback[_0x76c3fa(0x134)] = function(_0x1edcab) {
-        const _0x13edf9 = _0x76c3fa;
-        let _0x27e6dc = Math['round'](geofs['animation']['values'][_0x13edf9(0x137)]),
-            _0x5497ae = _0x1edcab * Math[_0x13edf9(0x144)](_0x27e6dc * Math['PI'] / 0xb4),
-            _0x1082b7 = _0x1edcab * Math[_0x13edf9(0x151)](_0x27e6dc * Math['PI'] / 0xb4);
-        geofs[_0x13edf9(0x163)]['instance'][_0x13edf9(0x16b)]['setLinearVelocity']([_0x5497ae, _0x1082b7, 0x0]);
-    }, pushback[_0x76c3fa(0x16f)] = function(_0x136d38) {
-        const _0x3613ab = _0x76c3fa;
-        pushback[_0x3613ab(0x15d)] = _0x136d38, geofs[_0x3613ab(0x12a)]['values'][_0x3613ab(0x141)] = _0x136d38;
-    };
-    let _0x2e6f7e;
-
-    function _0x37eb5f() {
-        const _0x301c68 = _0x76c3fa;
-        _0x2e6f7e != void 0x0 && _0x2e6f7e[_0x301c68(0x152)]();
-        _0x2e6f7e = window[_0x301c68(0x160)]('', _0x301c68(0x176), 'toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=yes,resizable=no,width=780,height=300,top=' + (screen[_0x301c68(0x166)] - 0x190) + _0x301c68(0x133) + (screen[_0x301c68(0x142)] - 0x348)), _0x2e6f7e[_0x301c68(0x159)][_0x301c68(0x146)][_0x301c68(0x131)] = _0x301c68(0x129);
-        let _0x2be97a = _0x2e6f7e[_0x301c68(0x159)][_0x301c68(0x16a)](_0x301c68(0x15d)),
-            _0x2c809c = _0x2e6f7e['document'][_0x301c68(0x16a)](_0x301c68(0x172)),
-            _0xc38209 = _0x2e6f7e[_0x301c68(0x159)][_0x301c68(0x16a)](_0x301c68(0x154)),
-            _0x46d315 = _0x2e6f7e[_0x301c68(0x159)][_0x301c68(0x16a)]('reset'),
-            _0x2be90c = _0x2e6f7e[_0x301c68(0x159)][_0x301c68(0x16a)](_0x301c68(0x126)),
-            _0x3eab34 = _0x2e6f7e[_0x301c68(0x159)]['getElementById'](_0x301c68(0x169));
-        _0x2c809c[_0x301c68(0x14d)] = function() {
-            const _0x4f3dc8 = _0x301c68;
-            pushback[_0x4f3dc8(0x14c)] == !![] && (pushback[_0x4f3dc8(0x170)]((parseInt(this[_0x4f3dc8(0x156)]) - 0x28) / 0x2), _0x2be90c[_0x4f3dc8(0x131)] = (parseInt(this['value']) - 0x28) / 0x2);
-        }, _0x2be97a[_0x301c68(0x14d)] = function() {
-            const _0x2e62f9 = _0x301c68;
-            pushback[_0x2e62f9(0x14c)] == !![] && (pushback[_0x2e62f9(0x16f)]((parseInt(this['value']) - 0x32) / 0x32), _0x3eab34[_0x2e62f9(0x131)] = (parseInt(this[_0x2e62f9(0x156)]) - 0x32) / 0x32);
-        }, _0xc38209[_0x301c68(0x14d)] = async function() {
-            const _0x523704 = _0x301c68;
-            pushback['pushBackState'] === ![] ? pushback[_0x523704(0x130)](geofs[_0x523704(0x163)][_0x523704(0x167)]['id']) === !![] && (geofs[_0x523704(0x163)][_0x523704(0x167)][_0x523704(0x161)] == !![] && geofs[_0x523704(0x12a)][_0x523704(0x168)]['rollingSpeed'] < 0.5 && (await pushback['setUpdate'](), pushback[_0x523704(0x13d)](), pushback[_0x523704(0x14c)] = !![], geofs[_0x523704(0x12a)][_0x523704(0x168)]['pushBackTruck'] = 0x1, defaultFriction = geofs[_0x523704(0x163)][_0x523704(0x167)]['setup'][_0x523704(0x136)][_0x523704(0x171)]['lockSpeed'], geofs[_0x523704(0x163)][_0x523704(0x167)]['setup'][_0x523704(0x136)][_0x523704(0x171)][_0x523704(0x178)] = 0.5)) : (pushback[_0x523704(0x14c)] = ![], geofs[_0x523704(0x12a)]['values'][_0x523704(0x15c)] = 0x0, geofs['aircraft'][_0x523704(0x167)][_0x523704(0x12f)]['pushbackTruck'][_0x523704(0x158)][_0x523704(0x139)](), pushback[_0x523704(0x175)](), pushback[_0x523704(0x145)](), _0x46d315[_0x523704(0x125)]());
-        }, _0x46d315['onclick'] = function() {
-            const _0x147915 = _0x301c68;
-            _0x2be97a[_0x147915(0x156)] = '50', _0x3eab34[_0x147915(0x131)] = '0', _0x2c809c[_0x147915(0x156)] = '40', _0x2be90c[_0x147915(0x131)] = '0', pushback[_0x147915(0x145)](), pushback[_0x147915(0x170)](0x0), pushback[_0x147915(0x145)](), pushback['startYaw'](0x0);
-        }, _0x2e6f7e[_0x301c68(0x173)] = function() {
-            const _0x41c55e = _0x301c68;
-            pushback[_0x41c55e(0x14c)] = ![], geofs['animation'][_0x41c55e(0x168)]['pushBackTruck'] = 0x0, geofs[_0x41c55e(0x163)][_0x41c55e(0x167)][_0x41c55e(0x12f)]['pushbackTruck']['object3d'][_0x41c55e(0x139)](), pushback[_0x41c55e(0x175)](), pushback[_0x41c55e(0x145)](), _0x46d315[_0x41c55e(0x125)]();
-        }, _0x2e6f7e[_0x301c68(0x149)]('keydown', function(_0x25810f) {
-            const _0x5d2ed6 = _0x301c68;
-            if (_0x25810f[_0x5d2ed6(0x12e)] === 0x26 && pushback['speed'] < 0x14) {
-                let _0x2f7624 = pushback[_0x5d2ed6(0x172)] + 0.5;
-                pushback['startBack'](_0x2f7624), _0x2be90c['innerHTML'] = _0x2f7624, _0x2c809c[_0x5d2ed6(0x156)] = _0x2f7624 * 0x2 + 0x28;
-            } else {
-                if (_0x25810f[_0x5d2ed6(0x12e)] === 0x28 && pushback[_0x5d2ed6(0x172)] > -0x14) {
-                    let _0x568d06 = pushback[_0x5d2ed6(0x172)] - 0.5;
-                    pushback[_0x5d2ed6(0x170)](_0x568d06), _0x2be90c[_0x5d2ed6(0x131)] = _0x568d06, _0x2c809c[_0x5d2ed6(0x156)] = _0x568d06 * 0x2 + 0x28;
-                } else {
-                    if (_0x25810f['keyCode'] === 0x27 && pushback[_0x5d2ed6(0x15d)] < 0x1) {
-                        let _0x553f43 = Math[_0x5d2ed6(0x17a)]((pushback[_0x5d2ed6(0x15d)] + 0.02) * 0x64) / 0x64;
-                        pushback[_0x5d2ed6(0x16f)](_0x553f43), _0x3eab34[_0x5d2ed6(0x131)] = _0x553f43, _0x2be97a[_0x5d2ed6(0x156)] = _0x553f43 * 0x32 + 0x32;
-                    } else {
-                        if (_0x25810f[_0x5d2ed6(0x12e)] === 0x25 && pushback[_0x5d2ed6(0x15d)] > -0x1) {
-                            let _0x43d785 = Math[_0x5d2ed6(0x17a)]((pushback[_0x5d2ed6(0x15d)] - 0.02) * 0x64) / 0x64;
-                            pushback[_0x5d2ed6(0x16f)](_0x43d785), _0x3eab34[_0x5d2ed6(0x131)] = _0x43d785, _0x2be97a[_0x5d2ed6(0x156)] = _0x43d785 * 0x32 + 0x32;
-                        }
-                    }
-                }
-            }
-        });
-    }
-    pushback[_0x76c3fa(0x14c)] = ![], pushback['checkAircraft'] = function(_0x2ab80f) {
-        return pushbackInfo[_0x2ab80f] ? !![] : ![];
-    }, pushback[_0x76c3fa(0x128)] = function() {
-        const _0x482a25 = _0x76c3fa;
-        for (let _0x91881f = 0x0; _0x91881f < geofs[_0x482a25(0x163)]['instance'][_0x482a25(0x162)][_0x482a25(0x12f)][_0x482a25(0x14a)]; _0x91881f++) {
-            if (geofs[_0x482a25(0x163)][_0x482a25(0x167)][_0x482a25(0x162)][_0x482a25(0x12f)][_0x91881f][_0x482a25(0x132)])
-                for (let _0x4f6ba4 = 0x0; _0x4f6ba4 < geofs[_0x482a25(0x163)][_0x482a25(0x167)][_0x482a25(0x162)][_0x482a25(0x12f)][_0x91881f]['animations'][_0x482a25(0x14a)]; _0x4f6ba4++) {
-                    geofs[_0x482a25(0x163)][_0x482a25(0x167)][_0x482a25(0x162)][_0x482a25(0x12f)][_0x91881f][_0x482a25(0x132)][_0x4f6ba4]['value'] == _0x482a25(0x15d) && (geofs[_0x482a25(0x163)]['instance']['setup']['parts'][_0x91881f][_0x482a25(0x132)][_0x4f6ba4][_0x482a25(0x156)] = 'yawPushback', geofs[_0x482a25(0x163)][_0x482a25(0x167)][_0x482a25(0x162)][_0x482a25(0x12f)][_0x91881f][_0x482a25(0x14f)] && (pushback[_0x482a25(0x14e)] = geofs[_0x482a25(0x163)][_0x482a25(0x167)][_0x482a25(0x162)]['parts'][_0x91881f]['animations'][_0x4f6ba4]['ratio']));
-                }
-        }
-    }, pushback[_0x76c3fa(0x175)] = function() {
-        const _0xc0bea3 = _0x76c3fa;
-        clearInterval(pushback[_0xc0bea3(0x12d)]), geofs['aircraft'][_0xc0bea3(0x167)]['setup']['contactProperties'][_0xc0bea3(0x171)][_0xc0bea3(0x178)] = defaultFriction;
-        for (let _0x1f9728 = 0x0; _0x1f9728 < geofs[_0xc0bea3(0x163)][_0xc0bea3(0x167)]['setup']['parts']['length']; _0x1f9728++) {
-            if (geofs['aircraft']['instance']['setup']['parts'][_0x1f9728]['animations'])
-                for (let _0x104b0f = 0x0; _0x104b0f < geofs[_0xc0bea3(0x163)][_0xc0bea3(0x167)][_0xc0bea3(0x162)][_0xc0bea3(0x12f)][_0x1f9728]['animations'][_0xc0bea3(0x14a)]; _0x104b0f++) {
-                    geofs['aircraft'][_0xc0bea3(0x167)][_0xc0bea3(0x162)][_0xc0bea3(0x12f)][_0x1f9728][_0xc0bea3(0x132)][_0x104b0f][_0xc0bea3(0x156)] == _0xc0bea3(0x141) && (geofs['aircraft']['instance'][_0xc0bea3(0x162)][_0xc0bea3(0x12f)][_0x1f9728][_0xc0bea3(0x132)][_0x104b0f][_0xc0bea3(0x156)] = _0xc0bea3(0x15d));
-                }
-        }
-    }, pushback[_0x76c3fa(0x13d)] = function() {
-        pushback['addPushBackTruck']();
-    }, pushback[_0x76c3fa(0x15e)] = function() {
-        const _0x41d712 = _0x76c3fa;
-        if (pushbackInfo[geofs['aircraft'][_0x41d712(0x167)]['id']]) {
-            let _0x1c84f4 = {
-                'name': _0x41d712(0x14b),
-                'model': pushbackModels[pushbackInfo[geofs['aircraft'][_0x41d712(0x167)]['id']][_0x41d712(0x153)]],
-                'position': pushbackInfo[geofs[_0x41d712(0x163)][_0x41d712(0x167)]['id']][_0x41d712(0x13f)],
-                'animations': [{
-                    'type': _0x41d712(0x15f),
-                    'axis': 'Z',
-                    'value': _0x41d712(0x141),
-                    'ratio': pushback['defaultYaw']
-                }, {
-                    'value': _0x41d712(0x135),
-                    'type': _0x41d712(0x157),
-                    'value': _0x41d712(0x15c)
-                }, {
-                    'type': _0x41d712(0x15f),
-                    'value': 'atilt',
-                    'axis': 'X',
-                    'ratio': -0x1
-                }],
-                'rotation': [0x0, 0x0, 0x0]
-            };
-            geofs[_0x41d712(0x163)][_0x41d712(0x167)][_0x41d712(0x143)]([_0x1c84f4], _0x41d712(0x150), 0x1, _0x41d712(0x16e));
-        }
-    };
-    let _0x184d9f = document['getElementsByClassName']('geofs-autopilot-bar'),
-        _0x5ca6a9 = document[_0x76c3fa(0x147)](_0x76c3fa(0x140));
-    _0x5ca6a9[_0x76c3fa(0x155)]['add'](_0x76c3fa(0x164)), _0x5ca6a9['id'] = _0x76c3fa(0x12c), _0x5ca6a9['style'][_0x76c3fa(0x13e)] = _0x76c3fa(0x165), _0x5ca6a9[_0x76c3fa(0x131)] = _0x76c3fa(0x13a), _0x184d9f[0x0][_0x76c3fa(0x15b)](_0x5ca6a9);
-    let _0x15fc99 = document[_0x76c3fa(0x16a)](_0x76c3fa(0x12c));
-    _0x15fc99[_0x76c3fa(0x125)] = function() {
-        _0x37eb5f();
-    };
-}
-
-function _0x1c81() {
-    const _0x53a943 = ['then', 'lockSpeed', '1258782BnpTvr', 'round', '6TtZgaV', '12AvIPhZ', 'onclick', 'speedInfo', '319TOOmos', 'setUpdate', '<style>\x0a.slidecontainer\x20{\x0a\x20\x20width:\x20100%;\x0a\x20\x20/*\x20Width\x20of\x20the\x20outside\x20container\x20*/\x0a}\x0a\x0a/*\x20The\x20slider\x20itself\x20*/\x0a.slider\x20{\x0a\x20\x20-webkit-appearance:\x20none;\x0a\x20\x20/*\x20Override\x20default\x20CSS\x20styles\x20*/\x0a\x20\x20appearance:\x20none;\x0a\x20\x20width:\x2050%;\x0a\x20\x20/*\x20Full-width\x20*/\x0a\x20\x20height:\x2025px;\x0a\x20\x20/*\x20Specified\x20height\x20*/\x0a\x20\x20background:\x20#d3d3d3;\x0a\x20\x20/*\x20Grey\x20background\x20*/\x0a\x20\x20outline:\x20none;\x0a\x20\x20/*\x20Remove\x20outline\x20*/\x0a\x20\x20opacity:\x200.7;\x0a\x20\x20/*\x20Set\x20transparency\x20(for\x20mouse-over\x20effects\x20on\x20hover)\x20*/\x0a\x20\x20-webkit-transition:\x20.2s;\x0a\x20\x20/*\x200.2\x20seconds\x20transition\x20on\x20hover\x20*/\x0a\x20\x20transition:\x20opacity\x20.2s;\x0a}\x0a\x0a/*\x20Mouse-over\x20effects\x20*/\x0a.slider:hover\x20{\x0a\x20\x20opacity:\x201;\x0a\x20\x20/*\x20Fully\x20shown\x20on\x20mouse-over\x20*/\x0a}\x0a\x0a/*\x20The\x20slider\x20handle\x20(use\x20-webkit-\x20(Chrome,\x20Opera,\x20Safari,\x20Edge)\x20and\x20-moz-\x20(Firefox)\x20to\x20override\x20default\x20look)\x20*/\x0a.slider::-webkit-slider-thumb\x20{\x0a\x20\x20-webkit-appearance:\x20none;\x0a\x20\x20/*\x20Override\x20default\x20look\x20*/\x0a\x20\x20appearance:\x20none;\x0a\x20\x20width:\x2025px;\x0a\x20\x20/*\x20Set\x20a\x20specific\x20slider\x20handle\x20width\x20*/\x0a\x20\x20height:\x2025px;\x0a\x20\x20/*\x20Slider\x20handle\x20height\x20*/\x0a\x20\x20background:\x20#04AA6D;\x0a\x20\x20/*\x20Green\x20background\x20*/\x0a\x20\x20cursor:\x20pointer;\x0a\x20\x20/*\x20Cursor\x20on\x20hover\x20*/\x0a}\x0a\x0a.slider::-moz-range-thumb\x20{\x0a\x20\x20width:\x2025px;\x0a\x20\x20/*\x20Set\x20a\x20specific\x20slider\x20handle\x20width\x20*/\x0a\x20\x20height:\x2025px;\x0a\x20\x20/*\x20Slider\x20handle\x20height\x20*/\x0a\x20\x20background:\x20#04AA6D;\x0a\x20\x20/*\x20Green\x20background\x20*/\x0a\x20\x20cursor:\x20pointer;\x0a\x20\x20/*\x20Cursor\x20on\x20hover\x20*/\x0a}\x0a\x0a.center\x20{\x0a\x20\x20font-family:\x20verdana;\x0a\x20\x20display:\x20center;\x0a}\x0a</style>\x0a<input\x20type=\x22checkbox\x22\x20id=\x22pushback\x22\x20name=\x22pushback\x22\x20value=\x22pushback\x22\x20class=\x22center\x22></input>\x0a<labelfor=\x22pushback\x22\x20class=\x22center\x22>\x20Enable\x20pushback\x20</label></p>\x20Yaw:\x0a<div\x20id=\x22yawInfo\x22>0</div>\x0a<div\x20class=\x22slidecontainer\x22>\x0a\x20\x20<input\x20type=\x22range\x22\x20min=\x220\x22\x20max=\x22100\x22\x20value=\x2250\x22\x20class=\x22slider\x22\x20id=\x22yaw\x22>\x0a\x20\x20</p>\x20Speed:\x20<div\x20id=\x22speedInfo\x22>0</div>\x0a\x20\x20<div\x20class=\x22slidecontainer\x22>\x0a\x20\x20\x20\x20<input\x20type=\x22range\x22\x20min=\x220\x22\x20max=\x2280\x22\x20value=\x2240\x22\x20class=\x22slider\x22\x20id=\x22speed\x22>\x0a\x20\x20\x20\x20</p>\x0a\x20\x20\x20\x20<button\x20class=\x22center\x22\x20type=\x22button\x22\x20id=\x22reset\x22>Reset</button>\x0a\x20\x20\x20\x20<br>\x0a\x20\x20</div>', 'animation', '363367mttbUH', 'pushbackButtonMain', 'lockInt', 'keyCode', 'parts', 'checkAircraft', 'innerHTML', 'animations', ',left=', 'pushBack', 'view', 'contactProperties', 'heading360', 'https://raw.githubusercontent.com/TotallyRealElonMusk/GeoFS-Pushback/main/pushback%20data/pushbackModel.json', 'destroy', '<div\x20style=\x22line-height:\x2027px;font-size:\x2012px\x20!important;pointer-events:\x20none;color:\x20#FFF;text-align:\x20center;\x22>PUSHBACK</div>', '4303656PWCiJH', 'json', 'addPushBackTruckHandler', 'cssText', 'pos', 'div', 'yawPushback', 'width', 'addParts', 'sin', 'stopBack', 'body', 'createElement', '1931860IqPriw', 'addEventListener', 'length', 'pushbackTruck', 'pushBackState', 'oninput', 'defaultYaw', 'collisionPoints', 'https://raw.githubusercontent.com/', 'cos', 'close', 'model', 'pushback', 'classList', 'value', 'show', 'object3d', 'document', '75250HvkrXo', 'append', 'pushBackTruck', 'yaw', 'addPushBackTruck', 'rotate', 'open', 'groundContact', 'setup', 'aircraft', 'control-pad', 'width:\x2090px;height:\x2025px;margin:\x200px\x2010px;border-radius:\x2015px;outline:\x20none;', 'height', 'instance', 'values', 'yawInfo', 'getElementById', 'rigidBody', '324036SVkzvQ', '4544724bXaXlh', 'Zup', 'startYaw', 'startBack', 'wheel', 'speed', 'onbeforeunload', '160yAxlOT', 'revertUpdate', 'Title'];
-    _0x1c81 = function() {
-        return _0x53a943;
-    };
-    return _0x1c81();
-}
-
-//function to get low-rpm sounds (input is aircraft id)
-function fetchAircraftSoundsLow(aircraft1) {
-try {
-if (aircraft1 == 1) {
-   return "https://www.geo-fs.com/sounds/rotax/rpm1.ogg"
-}
-if (aircraft1 == 2) {
-   return "https://www.geo-fs.com/sounds/o235/rpm1.ogg"
-}
-if (aircraft1 == 3) {
-   return "https://www.geo-fs.com/sounds/jet/rpm1.ogg"
-}
-if (aircraft1 == 4) {
-   return "https://www.geo-fs.com/sounds/737/rpm0.ogg"
-}
-if (aircraft1 == 5) {
-   return "https://www.geo-fs.com/sounds/phenom/rpm0.ogg"
-}
-if (aircraft1 == 6) {
-   return "https://www.geo-fs.com/sounds/737/rpm0.ogg" //this is the Twin Otter but the sounds are not 6 sec long
-}
-if (aircraft1 == 7) {
-   return "https://www.geo-fs.com/sounds/f16/rpm0.ogg"
-}
-if (aircraft1 == 8) {
-   return "https://www.geo-fs.com/sounds/pitts/rpm1.ogg"
-}
-if (aircraft1 == 9) {
-   return "https://www.geo-fs.com/sounds/ec135/rpm2.ogg"
-}
-if (aircraft1 == 10) {
-   return "https://www.geo-fs.com/sounds/a380/rpm1.ogg"
-}
-if (aircraft1 == 12) {
-   return "https://www.geo-fs.com/sounds/pc7/turbine.ogg"
-}
-if (aircraft1 == 13) {
-   return "https://www.geo-fs.com/models/aircraft/premium/dhc2/sounds/rpm0.ogg"
-}
-if (aircraft1 == 14) {
-   return "https://www.geo-fs.com/models/aircraft/premium/cricri/sounds/rpm1.ogg"
-}
-if (aircraft1 == 15) {
-   return "https://www.geo-fs.com/sounds/p38/rpm0.ogg"
-}
-if (aircraft1 == 16) {
-   return "https://www.geo-fs.com/sounds/dc3/rpm1.ogg"
-}
-if (aircraft1 == 18) {
-   return "https://www.geo-fs.com/sounds/su35/rpm1.ogg"
-}
-} catch(error) {
-throw("Error: sound loading failed 1. " + error)
-}
-}
-//function to get high-rpm sounds (input is, again, aircraft id)
-function fetchAircraftSoundsHigh(aircraft2) {
-try {
-if (aircraft2 == 1) {
-   return "https://www.geo-fs.com/sounds/rotax/rpm4.ogg"
-}
-if (aircraft2 == 2) {
-   return "https://www.geo-fs.com/sounds/o235/rpm4.ogg"
-}
-if (aircraft2 == 3) {
-   return "https://www.geo-fs.com/sounds/jet/rpm3.ogg"
-}
-if (aircraft2 == 4) {
-   return "https://www.geo-fs.com/sounds/737/rpm2.ogg"
-}
-if (aircraft2 == 5) {
-   return "https://www.geo-fs.com/sounds/737/rpm2.ogg"
-}
-if (aircraft2 == 6) {
-   return "https://www.geo-fs.com/sounds/737/rpm2.ogg"
-}
-if (aircraft2 == 7) {
-   return "https://www.geo-fs.com/sounds/f16/rpm2.ogg"
-}
-if (aircraft2 == 8) {
-   return "https://www.geo-fs.com/sounds/pitts/rpm3.ogg"
-}
-if (aircraft2 == 9) {
-   return "https://www.geo-fs.com/sounds/ec135/rpm2.ogg"
-}
-if (aircraft2 == 10) {
-   return "https://www.geo-fs.com/sounds/a380/rpm4.ogg"
-}
-if (aircraft2 == 12) {
-   return "https://www.geo-fs.com/sounds/pc7/prop.ogg"
-}
-if (aircraft2 == 13) {
-   return "https://www.geo-fs.com/models/aircraft/premium/dhc2/sounds/rpm1.ogg"
-}
-if (aircraft2 == 14) {
-   return "https://www.geo-fs.com/models/aircraft/premium/cricri/sounds/rpm2.ogg"
-}
-if (aircraft2 == 15) {
-   return "https://www.geo-fs.com/sounds/p38/rpm2.ogg"
-}
-if (aircraft2 == 16) {
-   return "https://www.geo-fs.com/sounds/dc3/rpm4.ogg"
-}
-if (aircraft2 == 18) {
-   return "https://www.geo-fs.com/sounds/su35/rpm4.ogg"
-}
-} catch(error) {
-throw("Error: sound loading failed 2. " + error)
-}
-}
-var lastAirspeed = null;
-function computeSounds() {
-//for every visible user
-Object.values(multiplayer.visibleUsers).forEach(function(e){
-//previous airspeed
-lastAirspeed = e.lastUpdate.st.as
-//after one second, has airspeed changed?
-setTimeout(() => {
-	if (e.referencePoint.lla[2] - geofs.aircraft.instance.llaLocation[2] <= 1000 && geofs.aircraft.instance.llaLocation[2] - e.referencePoint.lla[2] <= 1000 && e.distance < 1000 && e.lastUpdate.st.as >= 50 && (e.lastUpdate.st.as - lastAirspeed) >= -5) {
-audio.impl.html5.playFile(fetchAircraftSoundsHigh(e.aircraft))
-	} else if (e.referencePoint.lla[2] - geofs.aircraft.instance.llaLocation[2] <= 1000 && geofs.aircraft.instance.llaLocation[2] - e.referencePoint.lla[2] <= 1000 && e.distance < 1000 && e.lastUpdate.st.as <= 49 && (e.lastUpdate.st.as - lastAirspeed) >= 5) {
-audio.impl.html5.playFile(fetchAircraftSoundsHigh(e.aircraft))
-	} else if (e.referencePoint.lla[2] - geofs.aircraft.instance.llaLocation[2] <= 1000 && geofs.aircraft.instance.llaLocation[2] - e.referencePoint.lla[2] <= 1000 && e.distance < 1000) {
-audio.impl.html5.playFile(fetchAircraftSoundsLow(e.aircraft))
 	}
-	},2000)
+
 })
-};
-multiplayerSoundInterval = setInterval(function(){computeSounds()},2000)
 
-//Terrain Radar
-let terrainPoints = [];
-function getRadar(resolution) {
-  if (terrainPoints.length > resolution) {
-  terrainPoints = [];
-  }
-  for (let i = 0; i < 500; i++) {
-    let distance = i/8 % 3;
-    let directionStart = geofs.animation.values.heading
-    let direction = directionStart - i /5
-    let x1 = geofs.aircraft.instance.llaLocation[0];
-    let y1 = geofs.aircraft.instance.llaLocation[1];
-    let x2 = distance*Math.sin(Math.PI*direction/180);
-    let y2 = distance*Math.cos(Math.PI*direction/180);
-    terrainPoints.push([distance*100, Math.PI*((i/5  - 225)/180), geofs.getGroundAltitude([x1+(x2 * 1), y1+(y2 * 1)]).location[2]]);
-  }
-  
-}
-
-let toggleRadar = 0
-
-function radar(){
-if (toggleRadar == 0){
-  toggleRadar = 1;
-}
-  else{
-    toggleRadar = 0;
-  }
-}
-
-
-//ILS program
-
-function getDistance(lat1, lon1, lat2, lon2) {
-  var R = 6371;
-  var dLat = deg2rad(lat2 - lat1);
-  var dLon = deg2rad(lon2 - lon1);
-  var a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2)
-    ;
-  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  var d = R * c;
-  return d;
-}
-
-function deg2rad(deg) {
-  return deg * (Math.PI / 180)
-}
-
-
-function computeSlopeDeviation(ae, alt, alg, lt, lg, a) {
-  let gradient = 0.05;
-  let distance = getDistance(alt, alg, lt, lg) * 1000;
-  let idealAltAtPos = ae + gradient * distance;
-  let deviation = idealAltAtPos - a;
-  return deviation;
-}
-
-//runway side detection from autoland 1.0
-
-function getRwHeading() {
-  if (Object.values(geofs.runways.nearRunways).length != 0){
-  let defaultRunway = runway.heading;
-  let aircraftHeading = geofs.animation.values.heading360
-
-  if (aircraftHeading >= defaultRunway + 90 || aircraftHeading <= defaultRunway - 90) {
-    let sideHeading = runway.heading + 180;
-    let sideHeadingFixed = sideHeading % 360;
-    return sideHeadingFixed;
-  }
-  else {
-    return defaultRunway;
-  }
-  }
-else {
-return 0;
-}
-}
-
-function getRwThreshold() {
-  if (Object.values(geofs.runways.nearRunways).length != 0){
-  let defaultRunway = runway.heading;
-  let aircraftHeading = geofs.animation.values.heading;
-
-  if (aircraftHeading >= defaultRunway + 90 || aircraftHeading <= defaultRunway - 90) {
-
-    let x1 = runway.location[1];
-    let y1 = runway.location[0];
-    let x2 = runway.lengthInLla[1];
-    let y2 = runway.lengthInLla[0];
-    let runwayThresholdX = x1 + x2;
-    let runwayThresholdY = y1 + y2;
-    let runwayThreshold = [runwayThresholdY, runwayThresholdX, 0];
-    return runwayThreshold;
-  }
-
-  else {
-    let runwayThreshold = runway.location
-    return runwayThreshold;
-  }
-  }
-    else {
-return [0,0];
-    }
-}
-
-
-
-
-function radians(n) {
-  return n * (Math.PI / 180);
-}
-function degrees(n) {
-  return n * (180 / Math.PI);
-}
-
-//yes i know ive defined those functions like 3 times now but whatever lol
-
-
-//main function to find the direction to the airport. a perfect localizer capture will mean that the runway heading - function output = 0.
-function getBearing(a, b, c, d) {
-  startLat = radians(c);
-  startLong = radians(d);
-  endLat = radians(a);
-  endLong = radians(b);
-
-  let dLong = endLong - startLong;
-
-  let dPhi = Math.log(Math.tan(endLat / 2.0 + Math.PI / 4.0) / Math.tan(startLat / 2.0 + Math.PI / 4.0));
-  if (Math.abs(dLong) > Math.PI) {
-    if (dLong > 0.0)
-      dLong = -(2.0 * Math.PI - dLong);
-    else
-      dLong = (2.0 * Math.PI + dLong);
-  }
-
-  return (degrees(Math.atan2(dLong, dPhi)) + 360.0) % 360.0;
-}
-
-function computeLocDeviation(alt, alg, lt, lg) {
-  return getRwHeading() - getBearing(alt, alg, lt, lg);
-}
-
-function getNearestRunway() {
-  return Object.values(geofs.runways.nearRunways)[minKey];
-}
-
-let runway = ""
-
-function displayDeviations() {
-    if (Object.values(geofs.runways.nearRunways).length != 0){
-  a = getRwThreshold()
-  b = geofs.aircraft.instance.llaLocation
-  locdev = clamp(-computeLocDeviation(a[0], a[1], b[0], b[1]) * 20, -250, 250);
-  gsdev = clamp(3 * computeSlopeDeviation(Object.values(geofs.api.flatRunwayTerrainProviderInstance.regions)[0].referenceElevation, a[0], a[1], b[0], b[1], (geofs.animation.values.altitudeMeters - 4)), -500, 500);
-}
-}
-//ils display
-let ilshead = 0; // will set this to geofs.animation.values.heading360 later
-let locdev = 0;
-let gsdev = 0;
-let traffic = Object.values(multiplayer.visibleUsers)
-
-class ILSsim {
-  constructor(resX, resY, sizeX, sizeY) {
-    // IMP VALUES ! NO CHANGE !!
-    this.Values = {};
-    this.Values.LocDev = 0;
-    this.Values.GSDev = 0;
-    this.Values.Heading = 0;
-
-    // Everything Else LOL
-    this.VisibilityToggleButton;
-    this.Display = {};
-    this.Display.Element;
-    this.Display.Context;
-    this.Display.Width = resX;
-    this.Display.Height = resY;
-    this.Display.SizeWidth = sizeX;
-    this.Display.SizeHeight = sizeY;
-    this.Events = [];
-  }
-  // Implement Show/Hide Canvas
-  AssignVisibilityToggleButton(element) {
-    this.VisibilityToggleButton = element;
-    let self = this;
-    this.VisibilityToggleButton.onclick = function() {
-      if (this.innerText == "show") {
-        self.Display.Element.style.visibility = "visible";
-        this.innerText = "hide";
-      } else {
-        self.Display.Element.style.visibility = "hidden";
-        this.innerText = "show";
-      }
-    };
-  }
-  MakeLine(color, x1, y1, x2, y2) {
-    this.Display.Context.beginPath();
-    this.Display.Context.strokeStyle = color;
-    this.Display.Context.moveTo(x1, y1);
-    this.Display.Context.lineTo(x2, y2);
-    this.Display.Context.stroke();
-  }
-  MakeText(text, color, x, y, font) {
-    this.Display.Context.beginPath();
-    let prevColor = this.Display.Context.fillStyle;
-    let prevFont = this.Display.Context.font;
-    this.Display.Context.beginPath();
-    this.Display.Context.fillStyle = color;
-    if (font) {
-      this.Display.Context.font = font;
-    }
-    this.Display.Context.fillText(text, x, y);
-    this.Display.Context.fillStyle = prevColor;
-    this.Display.Context.font = prevFont;
-  }
-  // Non-Interactive Rectangle Making.
-  MakeRect(fill, color, x, y, width, height) {
-    this.Display.Context.beginPath();
-    this.Display.Context.strokeStyle = color;
-    this.Display.Context.rect(x, y, width, height);
-    this.Display.Context.stroke();
-    this.Display.Context.fillStyle = fill;
-    this.Display.Context.fill();
-  }
-  // Interactive Rectangle Making.
-  MakePolygon(points, fillColor, outlineColor, onclick) {
-    if (onclick) {
-      this.AddEventToCanvas(points, onclick);
-    }
-    this.Display.Context.beginPath();
-    this.Display.Context.moveTo(points[0][0], points[0][1]);
-    points = points.slice(1);
-    let a;
-    for (a of points) {
-      let x = a[0];
-      let y = a[1];
-      this.Display.Context.lineTo(x, y);
-    }
-    this.Display.Context.fillStyle = fillColor;
-    this.Display.Context.fill();
-    this.Display.Context.strokeStyle = outlineColor;
-    this.Display.Context.stroke();
-  }
-  MakeCircle(fillColor, strokeColor, x, y, r, startAngle, endAngle, antiClockwise) {
-    this.Display.Context.beginPath();
-    if (startAngle) {
-      this.Display.Context.arc(x, y, startAngle, endAngle, antiClockwise);
-    } else {
-      this.Display.Context.arc(x, y, r, 0, 2 * Math.PI);
-    }
-    this.Display.Context.strokeStyle = strokeColor;
-    this.Display.Context.stroke();
-    this.Display.Context.fillStyle = fillColor;
-    this.Display.Context.fill();
-  }
-  MakeRoundSlider(x, y, r, value, color1, color2, color3, color4, color5, color6, mouseMoveFunction, mouseUpFunction) {
-    let extractedValue = this.Values[value];
-    let direction = 360 / 100 * extractedValue;
-    direction -= 90;
-    this.MakeCircle(color2, color1, x, y, r);
-    this.MakeCircle(color4, color3, x, y, r * 0.5);
-    this.MakePolygon([
-      [x + (Math.cos(A2R(direction + 90)) * -1), y + (Math.sin(A2R(direction + 90)) * -1)],
-      [x + (Math.cos(A2R(direction + 90)) * 1), y + (Math.sin(A2R(direction + 90)) * 1)],
-      [x + (Math.cos(A2R(direction + 90)) * 1) + (Math.cos(A2R(direction)) * r), y + (Math.sin(A2R(direction + 90)) * 1) + (Math.sin(A2R(direction)) * r)],
-      [x + (Math.cos(A2R(direction + 90)) * -1) + (Math.cos(A2R(direction)) * r), y + (Math.sin(A2R(direction + 90)) * -1) + (Math.sin(A2R(direction)) * r)]
-    ], color6, color5, function(a) {
-      a.path[0].onmouseup = function(b) {
-        mouseUpFunction(b);
-        b.path[0].onmousemove = undefined;
-      };
-      a.path[0].onmousemove = function(b) {
-        mouseMoveFunction(b);
-      };
-    });
-  }
-  AddEventToCanvas(points, func) {
-    let newObj = { "points": points, "func": func };
-    this.Events[this.Events.length] = newObj;
-  }
-  RemoveEventFromCanvas(event) {
-    let index = this.Events.indexOf(event);
-    if (index > -1) {
-      this.Events.splice(index, 1);
-    }
-  }
-  ResetEvents() {
-    this.Events.length = 0;
-  }
-  SetupEventHandler() {
-    let self = this;
-    this.Display.Element.onmousedown = function(event) {
-      let rect = event.target.getBoundingClientRect();
-      let xRelation = self.Display.Width / self.Display.SizeWidth.slice(0, self.Display.SizeWidth.length - 2);
-      let yRelation = self.Display.Height / self.Display.SizeHeight.slice(0, self.Display.SizeHeight.length - 2);
-      let x = event.clientX - rect.left;
-      let y = event.clientY - rect.top;
-      x *= xRelation;
-      y *= yRelation;
-      console.log("X: " + x + "\nY: " + y);
-      console.log(event);
-      let a;
-      for (a of self.Events) {
-        let func = a.func;
-        let vs = a.points;
-        if (inside([x, y], vs)) {
-          func(event);
-          self.ResetEvents();
-        }
-      }
-      self.rDraw();
-    };
-  }
-  SetupCanvas() {
-    this.Display.Element = document.createElement("canvas");
-    this.Display.Element.width = this.Display.Width;
-    this.Display.Element.height = this.Display.Height;
-    this.Display.Element.style.width = this.Display.SizeWidth;
-    this.Display.Element.style.height = this.Display.SizeHeight;
-    this.Display.Element.style.position = "absolute";
-    this.Display.Element.style.left = "25%";
-    this.Display.Element.style.top = "25%";
-    this.Display.Element.style.transform = "translate(-50%, -50%)";
-    this.Display.Element.style.imageRendering = "pixelated";
-    document.body.appendChild(this.Display.Element);
-    this.Display.Context = this.Display.Element.getContext("2d");
-    this.Display.Context.lineWidth = 10;
-  }
-  rDraw() {
-    let w = this.Display.Width;
-    let h = this.Display.Height;
-    this.Display.Context.clearRect(0, 0, w, h)
-    this.Draw();
-  }
-  Draw() {
-    function getDeviation() {
-      let b = ilshead
-      let a = Math.PI * (b / 180);
-      let d = locdev;
-      let c1 = Math.sin(Math.PI * (heading / 180)) * 100;
-      let c2 = Math.cos(Math.PI * (heading / 180)) * 100;
-      let c3 = Math.PI * (b + 90) / 180;
-      let origin = [w - w / 1.9, h - h / 2];
-      let x1 = origin[0] + d * Math.sin(c3);
-      let y1 = origin[1] - d * Math.cos(c3);
-      let x2 = origin[0] + c1 + (d * Math.sin(c3));
-      let y2 = origin[1] - c2 - (d * Math.cos(c3));
-      // console.log([x1, y1, x2, y2, c3]); //For debugging
-      return [x1, y1, x2, y2];
-    }
-
-    function getTrafficIndicator(direction, distance) {
-      let directionRad = Math.PI * (direction / 180);
-      let origin = [w - w / 1.9, h - h / 2];
-      let x1 = origin[0] + distance * Math.sin(directionRad);
-      let y1 = origin[1] + distance * Math.cos(directionRad);
-      return [x1, y1];
-    }
-
-    let heading = ilshead;
-    let w = this.Display.Width;
-    let h = this.Display.Height;
-    this.MakeRect("black", "black", 0, 0, w, h);
-    this.MakeCircle("white", "white", w - w / 1.9, h - h / 2, 300);
-    this.MakeCircle("black", "white", w - w / 1.9, h - h / 2, 295);
-    //heading lines
-    this.MakeLine("#e600ff", w - w / 1.9, h - h / 2, w - w / 1.9 + Math.sin(Math.PI * (heading / 180)) * 300, h - h / 2 - Math.cos(Math.PI * (heading / 180)) * 300);
-    this.MakeLine("#e600ff", w - w / 1.9, h - h / 2, w - w / 1.9 - Math.sin(Math.PI * (heading / 180)) * 300, h - h / 2 + Math.cos(Math.PI * (heading / 180)) * 300);
-    this.MakeCircle("black", "black", w - w / 1.9, h - h / 2, 100);
-    //terrain radar
-    if (toggleRadar == 1) {
-    terrainPoints.forEach(function(e){
-      let elevation = geofs.animation.values.altitudeMeters;
-      if (e[2] < elevation - 1000){
-      display.MakeCircle("green", "#ffffff00", w - w / 1.9 +e[0]*Math.sin(e[1]), h - h / 2 + e[0]*Math.cos(e[1]), Math.abs(1+e[0]/20));
-      }
-      if (e[2] > elevation - 1000 && e[2] < elevation){
-        display.MakeCircle("yellow", "#ffffff00", w - w / 1.9 +e[0]*Math.sin(e[1]), h - h / 2 + e[0]*Math.cos(e[1]), Math.abs(1+e[0]/20));
-      }
-      if (e[2] > elevation) {
-        display.MakeCircle("red", "#ffffff00", w - w / 1.9 +e[0]*Math.sin(e[1]), h - h / 2 + e[0]*Math.cos(e[1]), Math.abs(1+e[0]/20));
-      }
-    })
-    }
-    //traffic
-    traffic.forEach(function(e) {
-      display.MakeCircle("black", "blue", getTrafficIndicator(geofs.animation.values.heading+getBearing(e.referencePoint.lla[0], e.referencePoint.lla[1], geofs.aircraft.instance.llaLocation[0], geofs.aircraft.instance.llaLocation[1]), e.distance / 100)[0], getTrafficIndicator(geofs.animation.values.heading+getBearing(e.referencePoint.lla[0], e.referencePoint.lla[1], geofs.aircraft.instance.llaLocation[0], geofs.aircraft.instance.llaLocation[1]), e.distance / 100)[1], 5)
-    })
-    //aircraft indicator
-    this.MakeLine("yellow", w - w / 1.9, h - h / 2 + 20, w - w / 1.9 + 60, h - h / 2 + 20);
-    this.MakeLine("yellow", w - w / 1.9, h - h / 2 + 20, w - w / 1.9 - 60, h - h / 2 + 20);
-    this.MakeLine("yellow", w - w / 1.9, h - h / 2, w - w / 1.9, h - h / 2 + 100);
-    this.MakeLine("yellow", w - w / 1.9, h - h / 2, w - w / 1.9, h - h / 2 - 20);
-    this.MakeLine("yellow", w - w / 1.9, h - h / 2 + 75, w - w / 1.9 + 25, h - h / 2 + 75);
-    this.MakeLine("yellow", w - w / 1.9, h - h / 2 + 75, w - w / 1.9 - 25, h - h / 2 + 75);
-    // gs indicator
-    this.MakeCircle("black", "#e600ff", w - w / 15, (h - h / 2 + 7) - gsdev, 20);
-    //gs deviation markers
-    this.MakeRect("yellow", "yellow", w - w / 10, h - h / 2, w / 15, h / 100);
-    this.MakeCircle("white", "white", w - w / 15, h - h / 1.5, 15);
-    this.MakeCircle("black", "white", w - w / 15, h - h / 1.5, 8);
-    this.MakeCircle("white", "white", w - w / 15, h - h / 1.2, 15);
-    this.MakeCircle("black", "white", w - w / 15, h - h / 1.2, 8);
-    this.MakeCircle("white", "white", w - w / 15, h - h / 3.25, 15);
-    this.MakeCircle("black", "white", w - w / 15, h - h / 3.25, 8);
-    this.MakeCircle("white", "white", w - w / 15, h - h / 6.5, 15);
-    this.MakeCircle("black", "white", w - w / 15, h - h / 6.5, 8);
-    //loc deviation markers
-    this.MakeCircle("black", "white", w - w / 1.9 - Math.cos(Math.PI * (heading / 180)) * 75, h - h / 2 - Math.sin(Math.PI * (heading / 180)) * 75, 8);
-    this.MakeCircle("black", "white", w - w / 1.9 - Math.cos(Math.PI * (heading / 180)) * 200, h - h / 2 - Math.sin(Math.PI * (heading / 180)) * 200, 8);
-    this.MakeCircle("black", "white", w - w / 1.9 + Math.cos(Math.PI * (heading / 180)) * 75, h - h / 2 + Math.sin(Math.PI * (heading / 180)) * 75, 8);
-    this.MakeCircle("black", "white", w - w / 1.9 + Math.cos(Math.PI * (heading / 180)) * 200, h - h / 2 + Math.sin(Math.PI * (heading / 180)) * 200, 8);
-    this.MakeLine("#e600ff", getDeviation()[0], getDeviation()[1], getDeviation()[2], getDeviation()[3]);
-    
-  };
-
-}
-
-let display
-let rwDistances = [];
-let minKey = 0;
-
-function ilsIntervalStart() {
-ilsInterval = setInterval(function() {
-  rwDistances = []
-  Object.values(geofs.runways.nearRunways).forEach(function(e){
-rwDistances.push(getDistance(e.location[0], e.location[1], geofs.aircraft.instance.llaLocation[0], geofs.aircraft.instance.llaLocation[1]));
-})
-  rwDistances.forEach(function(e, i){
-    if (e == Math.min(...rwDistances)) {
-      minKey = i;
-    }
-  })
-      ;
-  traffic = Object.values(multiplayer.visibleUsers);
-  runway = getNearestRunway();
-  ilshead = getRwHeading() - geofs.animation.values.heading360;
-  displayDeviations()
-  display.rDraw()
-}, 200)
-};
-
-
-let terrainInterval = setInterval(function(){
-  getRadar(100)
-}, 1000)
-
-let array = []
-
-function destroyDisplays() {
-  array = []
-  Object.values(document.getElementsByTagName("canvas")).forEach(function(e){if (e.width == 1000) array.push(e)})
-  array.forEach(function(e){e.remove()})
-}
-
-let hide = false
-function togglePanel(){
-  if (!hide){
- display = new ILSsim(1000, 1000, "250px", "250px");
-display.SetupCanvas();
-display.SetupEventHandler();
-display.Draw();
-    ilsIntervalStart()
-  hide = true;
-  }
-  else {
-    destroyDisplays()
-    hide = false;
-  }
-};
-
-// Panel Code
-let ilspanel = document.createElement("div");
-ilspanel.innerHTML = '<ul class="geofs-list geofs-toggle-panel geofs-autoland-list geofs-preferences" data-noblur="true" data-onshow="{geofs.initializePreferencesPanel()}" data-onhide="{geofs.savePreferencesPanel()}"><style>#MainDIV {position: absolute;left: 0px;top: 0px;background-color: white;border: 5px solid #000000;text-align: center;padding: 0px 10px 10px 10px;}#DIVtitle {color: black;font-family: monospace;font-weight: bold;font-size: 20px;}p {color: black;font-family: monospace;font-weight: bold;}.button {display: inline-block;padding: 3px 24px;font-size: 15px;cursor: pointer;text-align: center;text-decoration: none;outline: none;color: black;background-color: #ffc107;border: none;border-radius: 1px;box-shadow: 0 0px #999;}.button2 {display: inline-block}.button:hover {background-color: #536dfe}.button:active {opacity: 0.6;}.button3 {display: inline-block;padding: 3px 24px;font-size: 15px;cursor: pointer;text-align: center;text-decoration: none;outline: none;color: #fff;background-color: #536dfe;border: none;border-radius: 1px;box-shadow: 0 0px #999;}.button4 {display: inline-block;padding: 3px 24px;font-size: 15px;cursor: pointer;text-align: center;text-decoration: none;outline: none;color: #fff;background-color: red;border: none;border-radius: 1px;box-shadow: 0 0px #999;}</style><div id="MainDIV"><p id="DIVtitle">ILS Interface</p><p>ILS Interface:</p><button class = "button" onclick = "togglePanel()">Toggle ILS panel</button><button class = "button" onclick = "radar()">Toggle Terrain Radar</button></div></ul>'
-
-let sidePanel = document.getElementsByClassName("geofs-ui-left")[0]
-document.getElementsByClassName("geofs-ui-left")[0].appendChild(ilspanel)
-
-// Toggle Button Code
-let buttonDiv = document.createElement("div");
-buttonDiv.innerHTML = '<button class="mdl-button mdl-js-button geofs-f-standard-ui geofs-mediumScreenOnly" data-toggle-panel=".geofs-autoland-list" data-tooltip-classname="mdl-tooltip--top" id="ilsbutton" tabindex="0" data-upgraded=",MaterialButton">ILS</button>'
-document.body.appendChild(buttonDiv);
-document.getElementsByClassName("geofs-ui-bottom")[0].appendChild(buttonDiv);
-let element = document.getElementById("ilsbutton");
-document.getElementsByClassName("geofs-ui-bottom")[0].insertBefore(element, buttonDiv);
 //Consistency
 function realismGo() {
    console.log("Realism Pack running")
@@ -3848,6 +2438,1229 @@ setTimeout(() => {
 }
 }
 f14aInterval = setInterval(function(){runF14A()},10)
+
+ui.notification.show("A321Neo addon by AriakimTaiyo and NVB9ALT. ILS IS included.")
+//Note from NVB9: I modified some parts, expanded it a little, and added a bunch of labels in the code.
+
+//TEMP NOTE: add APU sounds
+
+let tiltToHold = 0;
+let ils = true;
+let deadZone = 0.02;
+let pitchCenter = 0;
+let rollTohold = 0;
+let lastlla = [];
+let velocityVec = 0;
+
+
+// Converts from degrees to radians.
+function toRadians(degrees) {
+  return degrees * Math.PI / 180;
+};
+
+// Converts from radians to degrees.
+function toDegrees(radians) {
+  return radians * 180 / Math.PI;
+}
+
+
+function bearing(startLat, startLng, destLat, destLng) {
+  startLat = toRadians(startLat);
+  startLng = toRadians(startLng);
+  destLat = toRadians(destLat);
+  destLng = toRadians(destLng);
+
+  y = Math.sin(destLng - startLng) * Math.cos(destLat);
+  x = Math.cos(startLat) * Math.sin(destLat) -
+    Math.sin(startLat) * Math.cos(destLat) * Math.cos(destLng - startLng);
+  brng = Math.atan2(y, x);
+  brng = toDegrees(brng);
+  return (brng + 360) % 360;
+}
+function getVV() {
+  velocityVec = bearing(lastlla[0], lastlla[1], geofs.aircraft.instance.llaLocation[0], geofs.aircraft.instance.llaLocation[1])
+}
+
+function computePitch() {
+  // implement tilt holding
+  if (geofs.animation.values.groundContact == 0) {
+  if (geofs.animation.values.accZ <= 30 && geofs.animation.values.accZ >= -30) {
+  if (geofs.animation.values.pitch <= deadZone && geofs.animation.values.pitch >= -deadZone) {
+    pitchStage1 = -(tiltToHold - geofs.animation.values.atilt) / 20
+    pitchCenter = pitchStage1;
+  }
+  else {
+    //stall protection
+    if (geofs.animation.values.aoa <= 10) {
+      pitchStage1 = -(tiltToHold - geofs.animation.values.atilt) / 5
+      tiltToHold = geofs.animation.values.atilt - geofs.animation.values.pitch * 5
+    }
+    else {
+      pitchStage1 = -(tiltToHold - geofs.animation.values.atilt) / 5
+      tiltToHold = (geofs.animation.values.atilt - geofs.animation.values.pitch * 5) + 1
+    }
+  }
+  geofs.animation.values.computedPitch = clamp(pitchStage1 + pitchCenter, -1, 1)
+}
+  else {
+    geofs.animation.values.computedPitch = geofs.animation.values.pitch;
+  }
+  }
+  else {
+    geofs.animation.values.computedPitch = geofs.animation.values.pitch / 2;
+  }
+}
+
+function computeRoll() {
+    if (geofs.animation.values.groundContact == 0) {
+  //roll stabilization from input
+  if (rollTohold <= 30 && rollTohold >= -30) {
+    rollTohold = rollTohold - geofs.animation.values.roll;
+    geofs.animation.values.computedRoll = clamp((geofs.animation.values.aroll - rollTohold) / 15, -1, 1);
+  }
+  else {
+    if (geofs.animation.values.aroll >= 0) {
+      rollTohold = 29;
+      geofs.animation.values.computedRoll = clamp((geofs.animation.values.aroll - rollTohold) / 15, -1, 1)
+    }
+    if (geofs.animation.values.aroll <= 0) {
+      rollTohold = -29;
+      geofs.animation.values.computedRoll = clamp((geofs.animation.values.aroll - rollTohold) / 15, -1, 1)
+    }
+  }
+  }
+  else {
+    geofs.animation.values.computedRoll = geofs.animation.values.roll
+  }
+}
+
+function computeYaw() {
+  //yaw damper experiment. probably not good for crosswinds lol
+  geofs.animation.values.computedYaw = geofs.animation.values.yaw
+}
+
+// get running average to dampen control inputs
+let pitchInputs = [0, 0, 0, 0, 0, 0, 0];
+let rollInputs = [0, 0, 0, 0, 0, 0, 0];
+let yawInputs = [0, 0, 0, 0, 0, 0, 0];
+geofs.animation.values.averagePitch = null;
+geofs.animation.values.averageRoll = null;
+geofs.animation.values.averageYaw = null;
+geofs.animation.values.outerAveragePitch = null;
+geofs.animation.values.outerAverageRoll = null;
+geofs.animation.values.outerAverageYaw = null;
+function pushInputs() {
+  pitchInputs.push(geofs.animation.values.computedPitch);
+  rollInputs.push(geofs.animation.values.computedRoll);
+  yawInputs.push(geofs.animation.values.computedYaw);
+}
+
+function computeOutputs() {
+  var pitchcheck = movingAvg(pitchInputs, 2, 2);
+  var rollcheck = movingAvg(rollInputs, 2, 2);
+  var yawcheck = movingAvg(yawInputs, 4, 4);
+  geofs.animation.values.averagePitch = pitchcheck[pitchcheck.length - 3]
+  geofs.animation.values.averageRoll = rollcheck[rollcheck.length - 3];
+  geofs.animation.values.averageYaw = yawcheck[yawcheck.length - 3];
+  geofs.animation.values.outerAveragePitch = clamp(geofs.animation.values.averagePitch / (geofs.animation.values.kias / 200), -1, 1);
+  geofs.animation.values.outerAverageRoll = clamp(geofs.animation.values.averageRoll / (geofs.animation.values.kias / 100), -1, 1);
+  geofs.animation.values.outerAverageYaw = clamp(geofs.animation.values.averageYaw / (geofs.animation.values.kias / 250), -1, 1);
+}
+
+function movingAvg(array, countBefore, countAfter) {
+  if (countAfter == undefined) countAfter = 0;
+  const result = [];
+  for (let i = 0; i < array.length; i++) {
+    const subArr = array.slice(Math.max(i - countBefore, 0), Math.min(i + countAfter + 1, array.length));
+    const avg = subArr.reduce((a, b) => a + (isNaN(b) ? 0 : b), 0) / subArr.length;
+    result.push(avg);
+  }
+  return result;
+}
+geofs.aircraft.instance.parts.elevleft.animations[0].value = "outerAveragePitch"
+geofs.aircraft.instance.parts.elevright.animations[0].value = "outerAveragePitch"
+geofs.aircraft.instance.parts.aileronleft.animations[0].value = "averageRoll"
+geofs.aircraft.instance.parts.aileronright.animations[0].value = "averageRoll"
+geofs.aircraft.instance.parts.rudder.animations[0].value = "averageYaw";
+
+setInterval(function() {
+  getVV()
+  computeRoll();
+  computePitch();
+  computeYaw();
+  pushInputs();
+  computeOutputs();
+}, 20)
+setInterval(function() {
+  lastlla = geofs.aircraft.instance.llaLocation
+}, 200)
+
+//engine simulations
+let engineL = false;
+let engineR = false;
+let ptuBork = false;
+let hydraulicsPL = 0;
+let hydraulicsPR = 0;
+let engRon = false;
+let engLon = false;
+let electricalOn = false;
+let landingLightsOn = false;
+let strobeOn = false;
+let terrainGPWS = false;
+geofs.animation.values.rpmL = 0;
+geofs.animation.values.rpmR = 0;
+geofs.animation.values.rpmLfan = 0;
+geofs.animation.values.rpmRfan = 0;
+geofs.animation.values.flapschange = 0;
+geofs.animation.values.ptu = 0;
+
+geofs.aircraft.instance.parts.fanleft.animations[0].value = "rpmLfan"
+geofs.aircraft.instance.parts.fanright.animations[0].value = "rpmRfan"
+
+function engineTest() {
+  if (engineL) {
+    geofs.aircraft.instance.engines[0].thrust = 147240;
+  }
+  else {
+    geofs.aircraft.instance.engines[0].thrust = 0;
+  }
+
+  if (engineR) {
+    geofs.aircraft.instance.engines[1].thrust = 147240;
+  }
+  else {
+    geofs.aircraft.instance.engines[1].thrust = 0;
+  }
+};
+
+function getHyraulics() {
+  if (engineL || engLon) {
+    hydraulicsPL = clamp(geofs.animation.values.rpmL, 0, 1000) / 2;
+  }
+  else {
+    hydraulicsPL = 0;
+  }
+  if (engineR || engRon) {
+    hydraulicsPR = clamp(geofs.animation.values.rpmR, 0, 1000) / 2;
+  }
+  else {
+    hydraulicsPR = 0;
+  }
+}
+function getRPMs() {
+  if (engLon) {
+    geofs.animation.values.rpmL = geofs.animation.values.rpmL + 2.5;
+    if (geofs.animation.values.rpmL >= 1000) {
+      engLon = false;
+      engineL = true;
+    }
+  }
+  if (engineL) {
+    geofs.animation.values.rpmL = geofs.animation.values.rpm + 100;
+  }
+  if (engRon) {
+    geofs.animation.values.rpmR = geofs.animation.values.rpmR + 2.5;
+    if (geofs.animation.values.rpmR >= 1000) {
+      engRon = false;
+      engineR = true;
+    }
+  }
+  if (engineR) {
+    geofs.animation.values.rpmR = geofs.animation.values.rpm + 100;
+  }
+  geofs.animation.values.rpmLfan = geofs.animation.values.rpmL * geofs.api.viewer.clock.currentTime.secondsOfDay / 100;
+  geofs.animation.values.rpmRfan = geofs.animation.values.rpmR * geofs.api.viewer.clock.currentTime.secondsOfDay / 100;
+}
+
+function getPTUBork() {
+  if (engLon || engRon) {
+    if (Math.abs(hydraulicsPL - hydraulicsPR) >= 100) {
+      ptuBork = true;
+      geofs.animation.values.ptu = 1;
+    }
+    else {
+      ptuBork = false;
+      geofs.animation.values.ptu = 0;
+    }
+  }
+  else {
+    ptuBork = false;
+    geofs.animation.values.ptu = 0;
+  }
+}
+
+var apu = new Boolean(0);
+
+function APUtoggle(){
+  if (apu == 0){
+    apu = 1;
+  }
+  else {
+    apu = 0;
+  }
+}
+
+function startEngine(a) {
+if (apu == 1 || engineL || engineR){
+  audio.playStartup();
+  if (a == "left" && geofs.animation.values.rpmL <= 999) {
+    engLon = true;
+    }
+  if (a == "right" && geofs.animation.values.rpmR <= 999) {
+    engRon = true;
+    }
+  }
+}
+
+//I modified the engine controls so each engine can be shut down independently, making things like simulating in-flight engine failure easier. I also added shutdown sounds. - NVB9
+
+function stopEngineLeft() {
+  audio.playShutdown();
+  engineL = false;
+  geofs.animation.values.rpmL = 0;
+
+
+}
+function stopEngineRight() {
+  audio.playShutdown();
+  engineR = false;
+  geofs.animation.values.rpmR = 0;
+
+
+}
+simInterval = setInterval(function() {
+  getHyraulics();
+  getPTUBork()
+  getRPMs();
+  getFlapChange();
+  engineTest();
+}, 15)
+
+//sound additions
+//Thinking about adding reverse sounds, would toggle with reverse = true. 'Cause thrust reversers are distinctly loud. - NVB9
+
+geofs.aircraft.instance.definition.sounds[0].effects.volume.value = "rpmL";
+geofs.aircraft.instance.definition.sounds[0].effects.pitch.value = "rpmL";
+geofs.aircraft.instance.definition.sounds[0].file = "https://138772948-227015667470610340.preview.editmysite.com/uploads/1/3/8/7/138772948/neo2.mp3"
+geofs.aircraft.instance.definition.sounds[1].effects.volume.value = "rpmL";
+geofs.aircraft.instance.definition.sounds[1].effects.pitch.value = "rpmL";
+geofs.aircraft.instance.definition.sounds[1].file = "https://138772948-227015667470610340.preview.editmysite.com/uploads/1/3/8/7/138772948/neo2.mp3"
+geofs.aircraft.instance.definition.sounds[2].effects.volume.value = "rpmL";
+geofs.aircraft.instance.definition.sounds[2].effects.pitch.value = "rpmL";
+geofs.aircraft.instance.definition.sounds[2].file = "https://138772948-227015667470610340.preview.editmysite.com/uploads/1/3/8/7/138772948/neo3.mp3"
+geofs.aircraft.instance.definition.sounds[5].file = "https://138772948-227015667470610340.preview.editmysite.com/uploads/1/3/8/7/138772948/startupneo.mp3"
+
+geofs.aircraft.instance.definition.sounds[7] = {}
+geofs.aircraft.instance.definition.sounds[7].id = "rpm4"
+geofs.aircraft.instance.definition.sounds[7].file = "https://138772948-227015667470610340.preview.editmysite.com/uploads/1/3/8/7/138772948/neo2.mp3"
+geofs.aircraft.instance.definition.sounds[7].effects = { "volume": { "value": "rpmR", "ramp": [800, 950, 2500, 3500], "ratio": 1 }, "pitch": { "value": "rpmR", "ramp": [0, 20000, 20000, 20000], "offset": 1, "ratio": 1 } };
+geofs.aircraft.instance.definition.sounds[8] = {}
+geofs.aircraft.instance.definition.sounds[8].id = "rpm5"
+geofs.aircraft.instance.definition.sounds[8].file = "https://138772948-227015667470610340.preview.editmysite.com/uploads/1/3/8/7/138772948/neo2.mp3"
+geofs.aircraft.instance.definition.sounds[8].effects = { "volume": { "value": "rpmR", "ramp": [1000, 2500, 10000, 10000], "ratio": 1 }, "pitch": { "value": "rpmR", "ramp": [0, 20000, 20000, 20000], "offset": 1, "ratio": 1.5 } };
+geofs.aircraft.instance.definition.sounds[9] = {}
+geofs.aircraft.instance.definition.sounds[9].id = "rpm6"
+geofs.aircraft.instance.definition.sounds[9].file = "https://138772948-227015667470610340.preview.editmysite.com/uploads/1/3/8/7/138772948/neo3.mp3"
+geofs.aircraft.instance.definition.sounds[9].effects = { "volume": { "value": "rpmR", "ramp": [6000, 20000, 20000, 20000], "ratio": 1 }, "pitch": { "value": "rpmR", "ramp": [1000, 20000, 20000, 20000], "offset": 1, "ratio": 1.5 } };
+
+geofs.aircraft.instance.definition.sounds[10] = {}
+geofs.aircraft.instance.definition.sounds[10].id = "ptuBork"
+geofs.aircraft.instance.definition.sounds[10].file = "https://138772948-227015667470610340.preview.editmysite.com/uploads/1/3/8/7/138772948/ptu.mp3"
+geofs.aircraft.instance.definition.sounds[10].effects = { "start": { "value": "ptu" } };
+
+
+//GPWS and RadioAlt callout test
+
+let isApprConfig = false;
+let trafficAlt = null;
+geofs.animation.values.isFlapsWarn = 0;
+geofs.animation.values.isGearWarn = 0;
+geofs.animation.values.isTerrainWarn = 0;
+geofs.animation.values.isPullupWarn = 0;
+geofs.animation.values.isBankWarn = 0;
+geofs.animation.values.isTCASClimb = 0;
+geofs.animation.values.isTCASDescend = 0;
+geofs.animation.values.isTCAS = 0;
+geofs.animation.values.isTCASClear = 0;
+geofs.animation.values.is100ab = 0;
+geofs.animation.values.isWindWarn = 0;
+geofs.animation.values.gpws1000 = 0;
+geofs.animation.values.gpws500 = 0;
+geofs.animation.values.gpws400 = 0;
+geofs.animation.values.gpws300 = 0;
+geofs.animation.values.gpws200 = 0;
+geofs.animation.values.gpws100 = 0;
+geofs.animation.values.gpws50 = 0;
+geofs.animation.values.gpws40 = 0;
+geofs.animation.values.gpws30 = 0;
+geofs.animation.values.gpws20 = 0;
+geofs.animation.values.gpws10 = 0;
+geofs.animation.values.isRetard = 0;
+let restingPoint = 12.232906828403847;
+
+//TCAS - NVB9
+function getTrafficProximity() {
+  Object.values(multiplayer.visibleUsers).forEach(function(e) {
+    if (e.distance <= 1000) {
+      if (e.referencePoint.lla[2] >= geofs.animation.values.altitudeMeters && e.referencePoint.lla[2] <= geofs.animation.values.altitudeMeters + 100) {
+        geofs.animation.values.isTCASDescend = 1;
+        if (geofs.animation.values.isTCAS == 0) {
+          let tcasInt = setInterval(function(i) {
+            if (i <= 2) {
+              geofs.animation.values.isTCAS = 1;
+            }
+            else {
+              geofs.animation.values.isTCAS = null;
+            }
+          }, 1000)
+        }
+        else {
+          geofs.animation.values.isTCASDescend = 0;
+        }
+        if (e.referencePoint.lla[2] <= geofs.animation.values.altitudeMeters && e.referencePoint.lla[2] >= geofs.animation.values.altitudeMeters - 100) {
+          geofs.animation.values.isTCASClimb = 1;
+          if (geofs.animation.values.isTCAS == 0) {
+            let tcasInt = setInterval(function(i) {
+              if (i <= 2) {
+                geofs.animation.values.isTCAS = 1;
+              }
+              else {
+                geofs.animation.values.isTCAS = null;
+              }
+            }, 1000)
+          }
+        }
+        else {
+          geofs.animation.values.isTCASClimb = 0;
+        }
+      }
+      else {
+        if (geofs.animation.values.isTCASClimb == 1 || geofs.animation.values.isTCASDescend == 1) {
+          counterAtClear = counter
+          geofs.animation.values.isTCASClimb = 0;
+          geofs.animation.values.isTCASDescend = 0;
+          geofs.animation.values.isTCAS = 0;
+
+          let counterInterval = setInterval(function(i) {
+            if (i <= 3) {
+              geofs.animation.values.isTCASClear = 1;
+            }
+            else {
+              geofs.animation.values.isTCASClear = 0;
+              clearinterval(counterInterval);
+            }
+          }, 1000)
+        }
+      }
+    }
+  })
+}
+
+let counter = 0;
+let counterAtClear = 0;
+let lastWind = 0;
+let interval = setInterval(function() {
+  if (counter < 2) {
+    counter = counter + 1
+  }
+  else { counter = 0 }
+  if (counter == 1) {
+    lastWind = weather.currentWindSpeed;
+  }
+
+}, 1000)
+
+//Windshear - NVB9
+function getWindShear() {
+  if (isApprConfig == 1 && lastWind - weather.currentWindSpeed <= 5) {
+    geofs.animation.values.isWindWarn = 1;
+  }
+  else {
+    geofs.animation.values.isWindWarn = 0;
+  }
+}
+
+//Gear and flaps warning triggers - NVB9
+function getGearFlapsWarn() {
+
+  if (geofs.animation.values.haglFeet <= 500 && geofs.animation.values.gearPosition == 1 && geofs.animation.values.climbrate < 0 && geofs.animation.values.isPullupWarn == 0) {
+    geofs.animation.values.isGearWarn = 1
+  }
+  else {
+    geofs.animation.values.isGearWarn = 0
+  }
+
+  if (geofs.animation.values.haglFeet <= 1000 && geofs.animation.values.flapsPosition == 0 && geofs.animation.values.climbrate < 0 && geofs.animation.values.isPullupWarn == 0) {
+    geofs.animation.values.isFlapsWarn = 1
+  }
+  else {
+    geofs.animation.values.isFlapsWarn = 0
+  }
+}
+
+//Terrain sensor and controller - NVB9
+function testTerrainorAppr() {
+if (geofs.animation.values.gearPosition == 0) {
+  if (geofs.animation.values.haglFeet <= 1000 && geofs.animation.values.climbrate <= -100 && geofs.animation.values.climbrate >= -5000 && geofs.animation.values.isGearWarn == 0 && geofs.animation.values.isFlapsWarn == 0 && isApprConfig == 0) {
+    geofs.animation.values.isTerrainWarn = 1;
+  }
+  else {
+    geofs.animation.values.isTerrainWarn = 0;
+  }
+
+  if (geofs.animation.values.haglFeet <= 5000 && geofs.animation.values.climbrate <= -2000 || geofs.animation.values.haglFeet <= 1000 && geofs.animation.values.climbrate <= -5000) {
+    geofs.animation.values.isPullupWarn = 1;
+  }
+  else {
+    geofs.animation.values.isPullupWarn = 0;
+  }
+}
+  else {
+    geofs.animation.values.isTerrainWarn = 0;
+    return
+  }
+}
+
+function getFlapChange() {
+  if (geofs.animation.values.flapsPosition < geofs.animation.values.flapsTarget || geofs.animation.values.flapsPosition > geofs.animation.values.flapsTarget) {
+    console.log("flaps extend")
+    geofs.animation.values.flapschange = 1
+  }
+  else {
+    geofs.animation.values.flapschange = 0
+  }
+}
+
+//Approach and landing sensor trigger unifiers - NVB9
+function testForApproach() {
+  if (geofs.animation.values.isFlapsWarn == 0 && geofs.animation.values.isGearWarn == 0 && geofs.animation.values.climbrate <= -1) {
+    isApprConfig = true
+  }
+  else {
+    isApprConfig = false
+  }
+}
+
+function getRetard() {
+  if (geofs.animation.values.gpws20 == 1 || geofs.animation.values.gpws10 == 1) {
+    if (geofs.animation.values.throttle >= 0.1) {
+      geofs.animation.values.isRetard = 1;
+    }
+    else {
+      geofs.animation.values.isRetard = 0;
+    }
+  }
+  else {
+    geofs.animation.values.isRetard = 0;
+  }
+}
+
+//Radio altimeter - NVB9
+function doRadioAltCall() {
+  if (isApprConfig) {
+    if (geofs.animation.values.haglFeet <= 1000 + restingPoint && geofs.animation.values.haglFeet >= 900 + restingPoint) {
+      geofs.animation.values.gpws1000 = 1;
+    }
+    else {
+      geofs.animation.values.gpws1000 = 0;
+    }
+    if (geofs.animation.values.haglFeet <= 500 + restingPoint && geofs.animation.values.haglFeet >= 400 + restingPoint) {
+      geofs.animation.values.gpws500 = 1;
+    }
+    else {
+      geofs.animation.values.gpws500 = 0;
+    }
+    if (geofs.animation.values.haglFeet <= 400 + restingPoint && geofs.animation.values.haglFeet >= 300 + restingPoint) {
+      geofs.animation.values.gpws400 = 1;
+    }
+    else {
+      geofs.animation.values.gpws400 = 0;
+    }
+    if (geofs.animation.values.haglFeet <= 300 + restingPoint && geofs.animation.values.haglFeet >= 200 + restingPoint) {
+      geofs.animation.values.gpws300 = 1;
+    }
+    else {
+      geofs.animation.values.gpws300 = 0;
+    }
+    if (geofs.animation.values.haglFeet <= 200 + restingPoint && geofs.animation.values.haglFeet >= 100 + restingPoint) {
+      geofs.animation.values.gpws200 = 1;
+    }
+    else {
+      geofs.animation.values.gpws200 = 0;
+    }
+    if (geofs.animation.values.haglFeet <= 100 + restingPoint && geofs.animation.values.haglFeet >= 50 + restingPoint) {
+      geofs.animation.values.gpws100 = 1;
+    }
+    else {
+      geofs.animation.values.gpws100 = 0;
+    }
+    if (geofs.animation.values.haglFeet <= 50 + restingPoint && geofs.animation.values.haglFeet >= 40 + restingPoint) {
+      geofs.animation.values.gpws50 = 1;
+    }
+    else {
+      geofs.animation.values.gpws50 = 0;
+    }
+    if (geofs.animation.values.haglFeet <= 40 + restingPoint && geofs.animation.values.haglFeet >= 30 + restingPoint) {
+      geofs.animation.values.gpws40 = 1;
+    }
+    else {
+      geofs.animation.values.gpws40 = 0;
+    }
+    if (geofs.animation.values.haglFeet <= 30 + restingPoint && geofs.animation.values.haglFeet >= 20 + restingPoint) {
+      geofs.animation.values.gpws30 = 1;
+    }
+    else {
+      geofs.animation.values.gpws30 = 0;
+    }
+    if (geofs.animation.values.haglFeet <= 20 + restingPoint && geofs.animation.values.haglFeet >= 10 + restingPoint) {
+      geofs.animation.values.gpws20 = 1;
+    }
+    else {
+      geofs.animation.values.gpws20 = 0;
+    }
+    if (geofs.animation.values.haglFeet <= 10 + restingPoint && geofs.animation.values.haglFeet >= 5 + restingPoint) {
+      geofs.animation.values.gpws10 = 1;
+    }
+    else {
+      geofs.animation.values.gpws10 = 0;
+    }
+  }
+  else {
+    geofs.animation.values.gpws1000 = 0;
+    geofs.animation.values.gpws500 = 0;
+    geofs.animation.values.gpws400 = 0;
+    geofs.animation.values.gpws300 = 0;
+    geofs.animation.values.gpws200 = 0;
+    geofs.animation.values.gpws100 = 0;
+    geofs.animation.values.gpws50 = 0;
+    geofs.animation.values.gpws40 = 0;
+    geofs.animation.values.gpws30 = 0;
+    geofs.animation.values.gpws20 = 0;
+    geofs.animation.values.gpws10 = 0;
+  }
+}
+
+//Wingflex reassignment - NVB9
+function resetLift2() {
+  geofs.animation.values.liftLeftWing = (-geofs.aircraft.instance.parts.wingleft.lift / 200000) + (geofs.animation.values.accZ) / 20;
+  geofs.animation.values.liftRightWing = (-geofs.aircraft.instance.parts.wingright.lift / 200000) + (geofs.animation.values.accZ) / 20;
+};
+
+setInterval(function() {
+  getTrafficProximity();
+  getFlapChange();
+  getWindShear();
+  testForApproach();
+  testTerrainorAppr();
+  resetLift2();
+  getRetard();
+  doRadioAltCall()
+})
+//assign alarms and sound fx
+
+geofs.aircraft.instance.definition.sounds[11] = {};
+geofs.aircraft.instance.definition.sounds[11].id = "flapssound"
+geofs.aircraft.instance.definition.sounds[11].file = "https://138772948-227015667470610340.preview.editmysite.com/uploads/1/3/8/7/138772948/777flap.mp3"
+geofs.aircraft.instance.definition.sounds[11].effects = { "start": { "value": "flapschange" } }
+
+geofs.aircraft.instance.definition.sounds[12] = {};
+geofs.aircraft.instance.definition.sounds[12].id = "landinggearwarn"
+geofs.aircraft.instance.definition.sounds[12].file = "https://138772948-227015667470610340.preview.editmysite.com/uploads/1/3/8/7/138772948/tlg.mp3"
+geofs.aircraft.instance.definition.sounds[12].effects = { "start": { "value": "isGearWarn" } }
+
+geofs.aircraft.instance.definition.sounds[13] = {};
+geofs.aircraft.instance.definition.sounds[13].id = "flapswarn"
+geofs.aircraft.instance.definition.sounds[13].file = "https://138772948-227015667470610340.preview.editmysite.com/uploads/1/3/8/7/138772948/tlf.mp3"
+geofs.aircraft.instance.definition.sounds[13].effects = { "start": { "value": "isFlapsWarn" } }
+
+geofs.aircraft.instance.definition.sounds[14] = {};
+geofs.aircraft.instance.definition.sounds[14].id = "terrainwarn"
+geofs.aircraft.instance.definition.sounds[14].file = "https://138772948-227015667470610340.preview.editmysite.com/uploads/1/3/8/7/138772948/tlt.mp3"
+geofs.aircraft.instance.definition.sounds[14].effects = { "start": { "value": "isTerrainWarn" } }
+
+geofs.aircraft.instance.definition.sounds[15] = {};
+geofs.aircraft.instance.definition.sounds[15].id = "pullwarn"
+geofs.aircraft.instance.definition.sounds[15].file = "https://138772948-227015667470610340.preview.editmysite.com/uploads/1/3/8/7/138772948/pullup.mp3"
+geofs.aircraft.instance.definition.sounds[15].effects = { "start": { "value": "isPullupWarn" } }
+
+geofs.aircraft.instance.definition.sounds[16] = {};
+geofs.aircraft.instance.definition.sounds[16].id = "1000"
+geofs.aircraft.instance.definition.sounds[16].file = "https://138772948-227015667470610340.preview.editmysite.com/uploads/1/3/8/7/138772948/1000ab.mp3"
+geofs.aircraft.instance.definition.sounds[16].effects = { "start": { "value": "gpws1000" } }
+
+geofs.aircraft.instance.definition.sounds[17] = {};
+geofs.aircraft.instance.definition.sounds[17].id = "500"
+geofs.aircraft.instance.definition.sounds[17].file = "https://138772948-227015667470610340.preview.editmysite.com/uploads/1/3/8/7/138772948/500ab.mp3"
+geofs.aircraft.instance.definition.sounds[17].effects = { "start": { "value": "gpws500" } }
+
+geofs.aircraft.instance.definition.sounds[18] = {};
+geofs.aircraft.instance.definition.sounds[18].id = "400"
+geofs.aircraft.instance.definition.sounds[18].file = "https://138772948-227015667470610340.preview.editmysite.com/uploads/1/3/8/7/138772948/400ab.mp3"
+geofs.aircraft.instance.definition.sounds[18].effects = { "start": { "value": "gpws400" } }
+
+geofs.aircraft.instance.definition.sounds[19] = {};
+geofs.aircraft.instance.definition.sounds[19].id = "300"
+geofs.aircraft.instance.definition.sounds[19].file = "https://138772948-227015667470610340.preview.editmysite.com/uploads/1/3/8/7/138772948/300ab.mp3"
+geofs.aircraft.instance.definition.sounds[19].effects = { "start": { "value": "gpws300" } }
+
+geofs.aircraft.instance.definition.sounds[20] = {};
+geofs.aircraft.instance.definition.sounds[20].id = "200"
+geofs.aircraft.instance.definition.sounds[20].file = "https://138772948-227015667470610340.preview.editmysite.com/uploads/1/3/8/7/138772948/200ab.mp3"
+geofs.aircraft.instance.definition.sounds[20].effects = { "start": { "value": "gpws200" } }
+
+geofs.aircraft.instance.definition.sounds[21] = {};
+geofs.aircraft.instance.definition.sounds[21].id = "100"
+geofs.aircraft.instance.definition.sounds[21].file = "https://138772948-227015667470610340.preview.editmysite.com/uploads/1/3/8/7/138772948/100abtrue.mp3"
+geofs.aircraft.instance.definition.sounds[21].effects = { "start": { "value": "gpws100" } }
+
+geofs.aircraft.instance.definition.sounds[22] = {};
+geofs.aircraft.instance.definition.sounds[22].id = "50"
+geofs.aircraft.instance.definition.sounds[22].file = "https://138772948-227015667470610340.preview.editmysite.com/uploads/1/3/8/7/138772948/50ab.mp3"
+geofs.aircraft.instance.definition.sounds[22].effects = { "start": { "value": "gpws50" } }
+
+geofs.aircraft.instance.definition.sounds[23] = {};
+geofs.aircraft.instance.definition.sounds[23].id = "40"
+geofs.aircraft.instance.definition.sounds[23].file = "https://138772948-227015667470610340.preview.editmysite.com/uploads/1/3/8/7/138772948/40ab.mp3"
+geofs.aircraft.instance.definition.sounds[23].effects = { "start": { "value": "gpws40" } }
+
+geofs.aircraft.instance.definition.sounds[24] = {};
+geofs.aircraft.instance.definition.sounds[24].id = "30"
+geofs.aircraft.instance.definition.sounds[24].file = "https://138772948-227015667470610340.preview.editmysite.com/uploads/1/3/8/7/138772948/30ab.mp3"
+geofs.aircraft.instance.definition.sounds[24].effects = { "start": { "value": "gpws30" } }
+
+geofs.aircraft.instance.definition.sounds[25] = {};
+geofs.aircraft.instance.definition.sounds[25].id = "20"
+geofs.aircraft.instance.definition.sounds[25].file = "https://138772948-227015667470610340.preview.editmysite.com/uploads/1/3/8/7/138772948/20ab.mp3"
+geofs.aircraft.instance.definition.sounds[25].effects = { "start": { "value": "gpws20" } }
+
+geofs.aircraft.instance.definition.sounds[26] = {};
+geofs.aircraft.instance.definition.sounds[26].id = "10"
+geofs.aircraft.instance.definition.sounds[26].file = "https://138772948-227015667470610340.preview.editmysite.com/uploads/1/3/8/7/138772948/10ab.mp3"
+geofs.aircraft.instance.definition.sounds[26].effects = { "start": { "value": "gpws10" } }
+
+geofs.aircraft.instance.definition.sounds[27] = {};
+geofs.aircraft.instance.definition.sounds[27].id = "TCAS"
+geofs.aircraft.instance.definition.sounds[27].file = "https://138772948-227015667470610340.preview.editmysite.com/uploads/1/3/8/7/138772948/traffic.mp3"
+geofs.aircraft.instance.definition.sounds[27].effects = { "start": { "value": "isTCAS" } }
+
+geofs.aircraft.instance.definition.sounds[28] = {};
+geofs.aircraft.instance.definition.sounds[28].id = "climb"
+geofs.aircraft.instance.definition.sounds[28].file = "https://138772948-227015667470610340.preview.editmysite.com/uploads/1/3/8/7/138772948/climb.mp3"
+geofs.aircraft.instance.definition.sounds[28].effects = { "start": { "value": "isTCASClimb" } }
+
+geofs.aircraft.instance.definition.sounds[29] = {};
+geofs.aircraft.instance.definition.sounds[29].id = "descend"
+geofs.aircraft.instance.definition.sounds[29].file = "https://138772948-227015667470610340.preview.editmysite.com/uploads/1/3/8/7/138772948/descend.mp3"
+geofs.aircraft.instance.definition.sounds[29].effects = { "start": { "value": "isTCASDescend" } }
+
+geofs.aircraft.instance.definition.sounds[30] = {};
+geofs.aircraft.instance.definition.sounds[30].id = "clear"
+geofs.aircraft.instance.definition.sounds[30].file = "https://138772948-227015667470610340.preview.editmysite.com/uploads/1/3/8/7/138772948/clear.mp3"
+geofs.aircraft.instance.definition.sounds[30].effects = { "start": { "value": "isTCASClear" } }
+
+geofs.aircraft.instance.definition.sounds[31] = {};
+geofs.aircraft.instance.definition.sounds[31].id = "retard"
+geofs.aircraft.instance.definition.sounds[31].file = "https://138772948-227015667470610340.preview.editmysite.com/uploads/1/3/8/7/138772948/retard.mp3"
+geofs.aircraft.instance.definition.sounds[31].effects = { "start": { "value": "isRetard" } }
+
+audio.init(geofs.aircraft.instance.definition.sounds);
+geofs.aircraft.instance.definition.sounds[0].effects.volume.ratio = 100
+geofs.aircraft.instance.definition.sounds[1].effects.volume.ratio = 100
+geofs.aircraft.instance.definition.sounds[2].effects.volume.ratio = 100
+geofs.aircraft.instance.definition.sounds[3].effects.volume.ratio = 100
+geofs.aircraft.instance.definition.sounds[7].effects.volume.ratio = 100
+geofs.aircraft.instance.definition.sounds[8].effects.volume.ratio = 100
+geofs.aircraft.instance.definition.sounds[9].effects.volume.ratio = 100
+
+
+//PFD toggle code - NVB9
+geofs.animation.values.enginesOn = false;
+
+function PFDtoggle(){
+if (geofs.animation.values.enginesOn == false){
+  geofs.animation.values.enginesOn = true;
+}
+  else{
+    geofs.animation.values.enginesOn = false;
+  }
+}
+
+//Terrain Radar
+let terrainPoints = [];
+function getRadar(resolution) {
+  if (terrainPoints.length > resolution) {
+  terrainPoints = [];
+  }
+  for (let i = 0; i < 500; i++) {
+    let distance = i/8 % 3;
+    let directionStart = geofs.animation.values.heading
+    let direction = directionStart - i /5
+    let x1 = geofs.aircraft.instance.llaLocation[0];
+    let y1 = geofs.aircraft.instance.llaLocation[1];
+    let x2 = distance*Math.sin(Math.PI*direction/180);
+    let y2 = distance*Math.cos(Math.PI*direction/180);
+    terrainPoints.push([distance*100, Math.PI*((i/5  - 225)/180), geofs.getGroundAltitude(x1+x2,y1+y2).location[2]]);
+  }
+  
+}
+
+let toggleRadar = 1
+
+function radar(){
+if (toggleRadar == 0){
+  toggleRadar = 1;
+}
+  else{
+    toggleRadar = 0;
+  }
+}
+
+//ILS program
+
+function getDistance(lat1, lon1, lat2, lon2) {
+  var R = 6371;
+  var dLat = deg2rad(lat2 - lat1);
+  var dLon = deg2rad(lon2 - lon1);
+  var a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2)
+    ;
+  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  var d = R * c;
+  return d;
+}
+
+function deg2rad(deg) {
+  return deg * (Math.PI / 180)
+}
+
+
+function computeSlopeDeviation(ae, alt, alg, lt, lg, a) {
+  let gradient = 0.05;
+  let distance = getDistance(alt, alg, lt, lg) * 1000;
+  let idealAltAtPos = ae + gradient * distance;
+  let deviation = idealAltAtPos - a;
+  return deviation;
+}
+
+//runway side detection from autoland 1.0
+
+function getRwHeading() {
+  let defaultRunway = runway.heading;
+  let aircraftHeading = geofs.animation.values.heading360
+
+  if (aircraftHeading >= defaultRunway + 90 || aircraftHeading <= defaultRunway - 90) {
+    let sideHeading = runway.heading + 180;
+    let sideHeadingFixed = sideHeading % 360;
+    return sideHeadingFixed;
+  }
+  else {
+    return defaultRunway;
+  }
+}
+
+function getRwThreshold() {
+  let defaultRunway = runway.heading;
+  let aircraftHeading = geofs.animation.values.heading;
+
+  if (aircraftHeading >= defaultRunway + 90 || aircraftHeading <= defaultRunway - 90) {
+
+    let x1 = runway.location[1];
+    let y1 = runway.location[0];
+    let x2 = runway.lengthInLla[1];
+    let y2 = runway.lengthInLla[0];
+    let runwayThresholdX = x1 + x2;
+    let runwayThresholdY = y1 + y2;
+    let runwayThreshold = [runwayThresholdY, runwayThresholdX, 0];
+    return runwayThreshold;
+  }
+
+  else {
+    let runwayThreshold = runway.location
+    return runwayThreshold;
+  }
+}
+
+
+
+
+function radians(n) {
+  return n * (Math.PI / 180);
+}
+function degrees(n) {
+  return n * (180 / Math.PI);
+}
+
+//yes i know ive defined those functions like 3 times now but whatever lol
+
+
+//main function to find the direction to the airport. a perfect localizer capture will mean that the runway heading - function output = 0.
+function getBearing(a, b, c, d) {
+  startLat = radians(c);
+  startLong = radians(d);
+  endLat = radians(a);
+  endLong = radians(b);
+
+  let dLong = endLong - startLong;
+
+  let dPhi = Math.log(Math.tan(endLat / 2.0 + Math.PI / 4.0) / Math.tan(startLat / 2.0 + Math.PI / 4.0));
+  if (Math.abs(dLong) > Math.PI) {
+    if (dLong > 0.0)
+      dLong = -(2.0 * Math.PI - dLong);
+    else
+      dLong = (2.0 * Math.PI + dLong);
+  }
+
+  return (degrees(Math.atan2(dLong, dPhi)) + 360.0) % 360.0;
+}
+
+function computeLocDeviation(alt, alg, lt, lg) {
+  return getRwHeading() - getBearing(alt, alg, lt, lg);
+}
+
+function getNearestRunway() {
+  return Object.values(geofs.runways.nearRunways)[minKey];
+}
+
+let runway = ""
+
+function displayDeviations() {
+  a = getRwThreshold()
+  b = geofs.aircraft.instance.llaLocation
+  locdev = clamp(-computeLocDeviation(a[0], a[1], b[0], b[1]) * 20, -250, 250);
+  gsdev = clamp(3 * computeSlopeDeviation(Object.values(geofs.api.flatRunwayTerrainProviderInstance.regions)[0].referenceElevation, a[0], a[1], b[0], b[1], (geofs.animation.values.altitudeMeters - 4)), -500, 500);
+}
+//ils display
+let ilshead = 0; // will set this to geofs.animation.values.heading360 later
+let locdev = 0;
+let gsdev = 0;
+let traffic = Object.values(multiplayer.visibleUsers)
+
+class ILSsim {
+  constructor(resX, resY, sizeX, sizeY) {
+    // IMP VALUES ! NO CHANGE !!
+    this.Values = {};
+    this.Values.LocDev = 0;
+    this.Values.GSDev = 0;
+    this.Values.Heading = 0;
+
+    // Everything Else LOL
+    this.VisibilityToggleButton;
+    this.Display = {};
+    this.Display.Element;
+    this.Display.Context;
+    this.Display.Width = resX;
+    this.Display.Height = resY;
+    this.Display.SizeWidth = sizeX;
+    this.Display.SizeHeight = sizeY;
+    this.Events = [];
+  }
+  // Implement Show/Hide Canvas
+  AssignVisibilityToggleButton(element) {
+    this.VisibilityToggleButton = element;
+    let self = this;
+    this.VisibilityToggleButton.onclick = function() {
+      if (this.innerText == "show") {
+        self.Display.Element.style.visibility = "visible";
+        this.innerText = "hide";
+      } else {
+        self.Display.Element.style.visibility = "hidden";
+        this.innerText = "show";
+      }
+    };
+  }
+  MakeLine(color, x1, y1, x2, y2) {
+    this.Display.Context.beginPath();
+    this.Display.Context.strokeStyle = color;
+    this.Display.Context.moveTo(x1, y1);
+    this.Display.Context.lineTo(x2, y2);
+    this.Display.Context.stroke();
+  }
+  MakeText(text, color, x, y, font) {
+    this.Display.Context.beginPath();
+    let prevColor = this.Display.Context.fillStyle;
+    let prevFont = this.Display.Context.font;
+    this.Display.Context.beginPath();
+    this.Display.Context.fillStyle = color;
+    if (font) {
+      this.Display.Context.font = font;
+    }
+    this.Display.Context.fillText(text, x, y);
+    this.Display.Context.fillStyle = prevColor;
+    this.Display.Context.font = prevFont;
+  }
+  // Non-Interactive Rectangle Making.
+  MakeRect(fill, color, x, y, width, height) {
+    this.Display.Context.beginPath();
+    this.Display.Context.strokeStyle = color;
+    this.Display.Context.rect(x, y, width, height);
+    this.Display.Context.stroke();
+    this.Display.Context.fillStyle = fill;
+    this.Display.Context.fill();
+  }
+  // Interactive Rectangle Making.
+  MakePolygon(points, fillColor, outlineColor, onclick) {
+    if (onclick) {
+      this.AddEventToCanvas(points, onclick);
+    }
+    this.Display.Context.beginPath();
+    this.Display.Context.moveTo(points[0][0], points[0][1]);
+    points = points.slice(1);
+    let a;
+    for (a of points) {
+      let x = a[0];
+      let y = a[1];
+      this.Display.Context.lineTo(x, y);
+    }
+    this.Display.Context.fillStyle = fillColor;
+    this.Display.Context.fill();
+    this.Display.Context.strokeStyle = outlineColor;
+    this.Display.Context.stroke();
+  }
+  MakeCircle(fillColor, strokeColor, x, y, r, startAngle, endAngle, antiClockwise) {
+    this.Display.Context.beginPath();
+    if (startAngle) {
+      this.Display.Context.arc(x, y, startAngle, endAngle, antiClockwise);
+    } else {
+      this.Display.Context.arc(x, y, r, 0, 2 * Math.PI);
+    }
+    this.Display.Context.strokeStyle = strokeColor;
+    this.Display.Context.stroke();
+    this.Display.Context.fillStyle = fillColor;
+    this.Display.Context.fill();
+  }
+  MakeRoundSlider(x, y, r, value, color1, color2, color3, color4, color5, color6, mouseMoveFunction, mouseUpFunction) {
+    let extractedValue = this.Values[value];
+    let direction = 360 / 100 * extractedValue;
+    direction -= 90;
+    this.MakeCircle(color2, color1, x, y, r);
+    this.MakeCircle(color4, color3, x, y, r * 0.5);
+    this.MakePolygon([
+      [x + (Math.cos(A2R(direction + 90)) * -1), y + (Math.sin(A2R(direction + 90)) * -1)],
+      [x + (Math.cos(A2R(direction + 90)) * 1), y + (Math.sin(A2R(direction + 90)) * 1)],
+      [x + (Math.cos(A2R(direction + 90)) * 1) + (Math.cos(A2R(direction)) * r), y + (Math.sin(A2R(direction + 90)) * 1) + (Math.sin(A2R(direction)) * r)],
+      [x + (Math.cos(A2R(direction + 90)) * -1) + (Math.cos(A2R(direction)) * r), y + (Math.sin(A2R(direction + 90)) * -1) + (Math.sin(A2R(direction)) * r)]
+    ], color6, color5, function(a) {
+      a.path[0].onmouseup = function(b) {
+        mouseUpFunction(b);
+        b.path[0].onmousemove = undefined;
+      };
+      a.path[0].onmousemove = function(b) {
+        mouseMoveFunction(b);
+      };
+    });
+  }
+  AddEventToCanvas(points, func) {
+    let newObj = { "points": points, "func": func };
+    this.Events[this.Events.length] = newObj;
+  }
+  RemoveEventFromCanvas(event) {
+    let index = this.Events.indexOf(event);
+    if (index > -1) {
+      this.Events.splice(index, 1);
+    }
+  }
+  ResetEvents() {
+    this.Events.length = 0;
+  }
+  SetupEventHandler() {
+    let self = this;
+    this.Display.Element.onmousedown = function(event) {
+      let rect = event.target.getBoundingClientRect();
+      let xRelation = self.Display.Width / self.Display.SizeWidth.slice(0, self.Display.SizeWidth.length - 2);
+      let yRelation = self.Display.Height / self.Display.SizeHeight.slice(0, self.Display.SizeHeight.length - 2);
+      let x = event.clientX - rect.left;
+      let y = event.clientY - rect.top;
+      x *= xRelation;
+      y *= yRelation;
+      console.log("X: " + x + "\nY: " + y);
+      console.log(event);
+      let a;
+      for (a of self.Events) {
+        let func = a.func;
+        let vs = a.points;
+        if (inside([x, y], vs)) {
+          func(event);
+          self.ResetEvents();
+        }
+      }
+      self.rDraw();
+    };
+  }
+  SetupCanvas() {
+    this.Display.Element = document.createElement("canvas");
+    this.Display.Element.width = this.Display.Width;
+    this.Display.Element.height = this.Display.Height;
+    this.Display.Element.style.width = this.Display.SizeWidth;
+    this.Display.Element.style.height = this.Display.SizeHeight;
+    this.Display.Element.style.position = "absolute";
+    this.Display.Element.style.left = "25%";
+    this.Display.Element.style.top = "25%";
+    this.Display.Element.style.transform = "translate(-50%, -50%)";
+    this.Display.Element.style.imageRendering = "pixelated";
+    document.body.appendChild(this.Display.Element);
+    this.Display.Context = this.Display.Element.getContext("2d");
+    this.Display.Context.lineWidth = 10;
+  }
+  rDraw() {
+    let w = this.Display.Width;
+    let h = this.Display.Height;
+    this.Display.Context.clearRect(0, 0, w, h)
+    this.Draw();
+  }
+  Draw() {
+    function getDeviation() {
+      let b = ilshead
+      let a = Math.PI * (b / 180);
+      let d = locdev;
+      let c1 = Math.sin(Math.PI * (heading / 180)) * 100;
+      let c2 = Math.cos(Math.PI * (heading / 180)) * 100;
+      let c3 = Math.PI * (b + 90) / 180;
+      let origin = [w - w / 1.9, h - h / 2];
+      let x1 = origin[0] + d * Math.sin(c3);
+      let y1 = origin[1] - d * Math.cos(c3);
+      let x2 = origin[0] + c1 + (d * Math.sin(c3));
+      let y2 = origin[1] - c2 - (d * Math.cos(c3));
+      // console.log([x1, y1, x2, y2, c3]); //For debugging
+      return [x1, y1, x2, y2];
+    }
+
+    function getTrafficIndicator(direction, distance) {
+      let directionRad = Math.PI * (direction / 180);
+      let origin = [w - w / 1.9, h - h / 2];
+      let x1 = origin[0] + distance * Math.sin(directionRad);
+      let y1 = origin[1] + distance * Math.cos(directionRad);
+      return [x1, y1];
+    }
+
+    let heading = ilshead;
+    let w = this.Display.Width;
+    let h = this.Display.Height;
+    this.MakeRect("black", "black", 0, 0, w, h);
+    this.MakeCircle("white", "white", w - w / 1.9, h - h / 2, 300);
+    this.MakeCircle("black", "white", w - w / 1.9, h - h / 2, 295);
+    //heading lines
+    this.MakeLine("#e600ff", w - w / 1.9, h - h / 2, w - w / 1.9 + Math.sin(Math.PI * (heading / 180)) * 300, h - h / 2 - Math.cos(Math.PI * (heading / 180)) * 300);
+    this.MakeLine("#e600ff", w - w / 1.9, h - h / 2, w - w / 1.9 - Math.sin(Math.PI * (heading / 180)) * 300, h - h / 2 + Math.cos(Math.PI * (heading / 180)) * 300);
+    this.MakeCircle("black", "black", w - w / 1.9, h - h / 2, 100);
+    //terrain radar
+    if (toggleRadar == 1) {
+    terrainPoints.forEach(function(e){
+      let elevation = geofs.animation.values.altitudeMeters;
+      if (e[2] < elevation - 1000){
+      display.MakeCircle("green", "#ffffff00", w - w / 1.9 +e[0]*Math.sin(e[1]), h - h / 2 + e[0]*Math.cos(e[1]), Math.abs(1+e[0]/20));
+      }
+      if (e[2] > elevation - 1000 && e[2] < elevation){
+        display.MakeCircle("yellow", "#ffffff00", w - w / 1.9 +e[0]*Math.sin(e[1]), h - h / 2 + e[0]*Math.cos(e[1]), Math.abs(1+e[0]/20));
+      }
+      if (e[2] > elevation) {
+        display.MakeCircle("red", "#ffffff00", w - w / 1.9 +e[0]*Math.sin(e[1]), h - h / 2 + e[0]*Math.cos(e[1]), Math.abs(1+e[0]/20));
+      }
+    })
+    }
+    //traffic
+    traffic.forEach(function(e) {
+      display.MakeCircle("black", "blue", getTrafficIndicator(geofs.animation.values.heading+getBearing(e.referencePoint.lla[0], e.referencePoint.lla[1], geofs.aircraft.instance.llaLocation[0], geofs.aircraft.instance.llaLocation[1]), e.distance / 100)[0], getTrafficIndicator(geofs.animation.values.heading+getBearing(e.referencePoint.lla[0], e.referencePoint.lla[1], geofs.aircraft.instance.llaLocation[0], geofs.aircraft.instance.llaLocation[1]), e.distance / 100)[1], 5)
+    })
+    //aircraft indicator
+    this.MakeLine("yellow", w - w / 1.9, h - h / 2 + 20, w - w / 1.9 + 60, h - h / 2 + 20);
+    this.MakeLine("yellow", w - w / 1.9, h - h / 2 + 20, w - w / 1.9 - 60, h - h / 2 + 20);
+    this.MakeLine("yellow", w - w / 1.9, h - h / 2, w - w / 1.9, h - h / 2 + 100);
+    this.MakeLine("yellow", w - w / 1.9, h - h / 2, w - w / 1.9, h - h / 2 - 20);
+    this.MakeLine("yellow", w - w / 1.9, h - h / 2 + 75, w - w / 1.9 + 25, h - h / 2 + 75);
+    this.MakeLine("yellow", w - w / 1.9, h - h / 2 + 75, w - w / 1.9 - 25, h - h / 2 + 75);
+    // gs indicator
+    this.MakeCircle("black", "#e600ff", w - w / 15, (h - h / 2 + 7) - gsdev, 20);
+    //gs deviation markers
+    this.MakeRect("yellow", "yellow", w - w / 10, h - h / 2, w / 15, h / 100);
+    this.MakeCircle("white", "white", w - w / 15, h - h / 1.5, 15);
+    this.MakeCircle("black", "white", w - w / 15, h - h / 1.5, 8);
+    this.MakeCircle("white", "white", w - w / 15, h - h / 1.2, 15);
+    this.MakeCircle("black", "white", w - w / 15, h - h / 1.2, 8);
+    this.MakeCircle("white", "white", w - w / 15, h - h / 3.25, 15);
+    this.MakeCircle("black", "white", w - w / 15, h - h / 3.25, 8);
+    this.MakeCircle("white", "white", w - w / 15, h - h / 6.5, 15);
+    this.MakeCircle("black", "white", w - w / 15, h - h / 6.5, 8);
+    //loc deviation markers
+    this.MakeCircle("black", "white", w - w / 1.9 - Math.cos(Math.PI * (heading / 180)) * 75, h - h / 2 - Math.sin(Math.PI * (heading / 180)) * 75, 8);
+    this.MakeCircle("black", "white", w - w / 1.9 - Math.cos(Math.PI * (heading / 180)) * 200, h - h / 2 - Math.sin(Math.PI * (heading / 180)) * 200, 8);
+    this.MakeCircle("black", "white", w - w / 1.9 + Math.cos(Math.PI * (heading / 180)) * 75, h - h / 2 + Math.sin(Math.PI * (heading / 180)) * 75, 8);
+    this.MakeCircle("black", "white", w - w / 1.9 + Math.cos(Math.PI * (heading / 180)) * 200, h - h / 2 + Math.sin(Math.PI * (heading / 180)) * 200, 8);
+    this.MakeLine("#e600ff", getDeviation()[0], getDeviation()[1], getDeviation()[2], getDeviation()[3]);
+    
+  };
+
+}
+let display
+let rwDistances = [];
+let minKey = 0;
+
+function ilsIntervalStart() {
+ilsInterval = setInterval(function() {
+  rwDistances = []
+  Object.values(geofs.runways.nearRunways).forEach(function(e){
+rwDistances.push(getDistance(e.location[0], e.location[1], geofs.aircraft.instance.llaLocation[0], geofs.aircraft.instance.llaLocation[1]));
+})
+  rwDistances.forEach(function(e, i){
+    if (e == Math.min(...rwDistances)) {
+      minKey = i;
+    }
+  })
+      ;
+  traffic = Object.values(multiplayer.visibleUsers);
+  runway = getNearestRunway();
+  ilshead = getRwHeading() - geofs.animation.values.heading360;
+  displayDeviations()
+  display.rDraw()
+}, 200)
+}
+let terrainInterval = setInterval(function(){
+  getRadar(100)
+}, 1000)
+
+let hide = false
+function togglePanel(){
+  if (!hide){
+ display = new ILSsim(1000, 1000, "250px", "250px");
+display.SetupCanvas();
+display.SetupEventHandler();
+display.Draw();
+    ilsIntervalStart()
+  hide = true;
+  }
+  else {
+    destroyDisplays()
+    hide = false;
+  }
+};
+
+let array = []
+
+function destroyDisplays() {
+  array = []
+  Object.values(document.getElementsByTagName("canvas")).forEach(function(e){if (e.width == 1000) array.push(e)})
+  array.forEach(function(e){e.remove()})
+}
+
+
+//temporary menu for user control | Note from NVB9: Gotta say this menu works pretty well tho
+// Panel Code
+//I organized the panel a bit better and added some more buttons yay - NVB9
+let a320panel = document.createElement("div");
+a320panel.innerHTML = '<ul class="geofs-list geofs-toggle-panel geofs-autoland-list geofs-preferences" data-noblur="true" data-onshow="{geofs.initializePreferencesPanel()}" data-onhide="{geofs.savePreferencesPanel()}"><style>#MainDIV {position: absolute;left: 0px;top: 0px;background-color: white;border: 5px solid #000000;text-align: center;padding: 0px 10px 10px 10px;}#DIVtitle {color: black;font-family: monospace;font-weight: bold;font-size: 20px;}p {color: black;font-family: monospace;font-weight: bold;}.button {display: inline-block;padding: 3px 24px;font-size: 15px;cursor: pointer;text-align: center;text-decoration: none;outline: none;color: black;background-color: #ffc107;border: none;border-radius: 1px;box-shadow: 0 0px #999;}.button2 {display: inline-block}.button:hover {background-color: #536dfe}.button:active {opacity: 0.6;}.button3 {display: inline-block;padding: 3px 24px;font-size: 15px;cursor: pointer;text-align: center;text-decoration: none;outline: none;color: #fff;background-color: #536dfe;border: none;border-radius: 1px;box-shadow: 0 0px #999;}.button4 {display: inline-block;padding: 3px 24px;font-size: 15px;cursor: pointer;text-align: center;text-decoration: none;outline: none;color: #fff;background-color: red;border: none;border-radius: 1px;box-shadow: 0 0px #999;}</style><div id="MainDIV"><p id="DIVtitle">Airbus A321Neo User Interface</p><p>Engines:</p><button onclick="startEngine(`left`)" class="button", id="leftstart">Start Left Engine</button><button onclick="startEngine(`right`)" class = "button" id="rightstart">Start Right Engine</button><button onclick="stopEngineLeft()" class = "button">Stop Left Engine</button><button onclick="stopEngineRight()" class = "button">Stop Right Engine</button><p>ILS:</p><button class = "button" onclick = "togglePanel()">ILS On/Off</button><button class = "button" onclick = "radar()">ILS Terrain Radar On/Off</button><p>PFD:</p><button class = "button" id="PFDtoggle" onclick = "PFDtoggle()">PFD On/Off</button><p>APU:</p><button class = "button" id="apuToggle" onclick = "APUtoggle()">APU On/Off</button></div></ul>'
+
+let sidePanel = document.getElementsByClassName("geofs-ui-left")[0]
+document.getElementsByClassName("geofs-ui-left")[0].appendChild(a320panel)
+
+// Toggle Button Code
+let buttonDiv = document.createElement("div");
+buttonDiv.innerHTML = '<button class="mdl-button mdl-js-button geofs-f-standard-ui geofs-mediumScreenOnly" data-toggle-panel=".geofs-autoland-list" data-tooltip-classname="mdl-tooltip--top" id="landButton" tabindex="0" data-upgraded=",MaterialButton">A321Neo</button>'
+document.body.appendChild(buttonDiv);
+document.getElementsByClassName("geofs-ui-bottom")[0].appendChild(buttonDiv);
+let element = document.getElementById("landButton");
+document.getElementsByClassName("geofs-ui-bottom")[0].insertBefore(element, buttonDiv);
+
 let k = 125;
 let dc = -1.5;
 let m = 0.6;
@@ -5013,6 +4826,7 @@ function yawDamper() {
 
 geofs.aircraft.instance.parts.rudder.animations[0].value = "rudderDamp";
 setInterval(function(){yawDamper();},10)
+
 //complicated maths to resolve torque axes
   //𝐹𝑠=|𝐹⃗ |cos(𝜃𝑠,𝐹)
 function splitAxes(force) {
@@ -5530,6 +5344,7 @@ setInterval(function(){
   tiller()
   stallForces()
 }, 20)
+
 geofs = geofs || {};
 
 geofs["atmosphereCommon.glsl"] = "" + "precision highp float;\n\nuniform float planetRadius;\n#ifdef VOLUMETRIC_CLOUDS\nconst float windSpeedRatio = 0.0002;\nuniform float cloudCover;\nuniform float cloudBase;\nuniform float cloudTop;\nuniform vec3 windVector;\n#ifdef REALTIME_CLOUDS\nuniform sampler2D coverageTexture;\n#endif\n#endif\n\n/*\n* Configuration\n*/\n#ifdef QUALITY_7\n\n#define PRIMARY_STEPS 16\n#define LIGHT_STEPS 4\n\n// This is only accessible from advanced settings\n#define CLOUDS_MAX_LOD 3\n#define MAXIMUM_CLOUDS_STEPS 100\n#define DISTANCE_QUALITY_RATIO 0.00003\n#define LIT_CLOUD\n#define CLOUD_SHADOWS\n\n#elif defined QUALITY_6\n\n#define PRIMARY_STEPS 16\n#define LIGHT_STEPS 4\n\n#define CLOUDS_MAX_LOD 3\n#define MAXIMUM_CLOUDS_STEPS 100\n#define DISTANCE_QUALITY_RATIO 0.00004\n#define LIT_CLOUD\n#define CLOUD_SHADOWS\n\n#elif defined QUALITY_5\n\n//#define PRIMARY_STEPS 12\n//#define LIGHT_STEPS 4\n#define PRIMARY_STEPS 9\n#define LIGHT_STEPS 3\n\n#define CLOUDS_MAX_LOD 3\n#define MAXIMUM_CLOUDS_STEPS 70\n#define DISTANCE_QUALITY_RATIO 0.00005\n#define LIT_CLOUD\n#define CLOUD_SHADOWS\n\n#elif defined QUALITY_4\n\n#define PRIMARY_STEPS 9\n#define LIGHT_STEPS 3\n\n#define CLOUDS_MAX_LOD 3\n#define MAXIMUM_CLOUDS_STEPS 50\n#define DISTANCE_QUALITY_RATIO 0.00007\n#define LIT_CLOUD\n#define CLOUD_SHADOWS\n\n#elif defined QUALITY_3\n\n#define PRIMARY_STEPS 6\n#define LIGHT_STEPS 2\n\n#define CLOUDS_MAX_LOD 2\n#define MAXIMUM_CLOUDS_STEPS 40\n#define DISTANCE_QUALITY_RATIO 0.0001\n#define CLOUD_SHADOWS\n\n#elif defined QUALITY_2\n\n#define PRIMARY_STEPS 4\n#define LIGHT_STEPS 1\n\n#define CLOUDS_MAX_LOD 2\n#define MAXIMUM_CLOUDS_STEPS 30\n#define DISTANCE_QUALITY_RATIO 0.0002\n#define CLOUD_SHADOWS\n\n#elif defined QUALITY_1\n\n#define PRIMARY_STEPS 3\n#define LIGHT_STEPS 1\n\n#define CLOUDS_MAX_LOD 2\n#define MAXIMUM_CLOUDS_STEPS 20\n#define DISTANCE_QUALITY_RATIO 0.0004\n\n#elif defined QUALITY_0\n\n#define PRIMARY_STEPS 0\n#define LIGHT_STEPS 0\n\n#define CLOUDS_MAX_LOD 0\n#define MAXIMUM_CLOUDS_STEPS 0\n#define DISTANCE_QUALITY_RATIO 0\n\n#else //DEFAULT\n\n#define PRIMARY_STEPS 9\n#define LIGHT_STEPS 2\n\n#define CLOUDS_MAX_LOD 2\n#define MAXIMUM_CLOUDS_STEPS 40\n#define DISTANCE_QUALITY_RATIO 0.0002\n#define CLOUD_SHADOWS\n\n#endif\n\n#define CLOUDS_DENS_MARCH_STEP 100.0\n#define CLOUDS_MAX_VIEWING_DISTANCE 250000.0\n\n/*\n* Utilities\n*/\n\n\n\n\n\nvec2 raySphereIntersect(vec3 r0, vec3 rd, float sr) {\nfloat a = dot(rd, rd);\nfloat b = 2.0 * dot(rd, r0);\nfloat c = dot(r0, r0) - (sr * sr);\nfloat d = (b * b) - 4.0 * a * c;\n\n// stop early if there is no intersect\nif (d < 0.0) return vec2(-1.0, -1.0);\n\n// calculate the ray length\nfloat squaredD = sqrt(d);\nreturn vec2(\n(-b - squaredD) / (2.0 * a),\n(-b + squaredD) / (2.0 * a)\n);\n}\n\n/*\n* Atmosphere scattering\n*/\n// Atmosphere by Dimas Leenman, Shared under the MIT license\n//https://github.com/Dimev/Realistic-Atmosphere-Godot-and-UE4/blob/master/godot/shader/atmosphere.shader\nvec3 light_intensity = vec3(100.0);//vec3(100.0); // how bright the light is, affects the brightness of the atmosphere\n//float planetRadius = 6361e3; // the radius of the planet\n//float atmo_radius = 6471e3; // the radius of the atmosphere\nfloat atmo_radius = planetRadius + 111e3;\nfloat realPlanetRadius = planetRadius + 10000.0;\nfloat atmo_radius_squared = atmo_radius * atmo_radius; // the radius of the atmosphere\nvec3 beta_ray = vec3(5.5e-6, 13.0e-6, 22.4e-6);//vec3(5.5e-6, 13.0e-6, 22.4e-6); // the amount rayleigh scattering scatters the colors (for earth: causes the blue atmosphere)\nvec3 beta_mie = vec3(21e-6); // vec3(21e-6);// the amount mie scattering scatters colors\nvec3 beta_ambient = vec3(0.0); // the amount of scattering that always occurs, can help make the back side of the atmosphere a bit brighter\nfloat g = 0.9; // the direction mie scatters the light in (like a cone). closer to -1 means more towards a single direction\nfloat height_ray = 10e3; // how high do you have to go before there is no rayleigh scattering?\nfloat height_mie = 3.2e3; // the same, but for mie\nfloat density_multiplier = 1.0; // how much extra the atmosphere blocks light\n\n#ifdef ADVANCED_ATMOSPHERE\nvec4 calculate_scattering(\nvec3 start, \t\t\t// the start of the ray (the camera position)\nvec3 dir, \t\t\t\t// the direction of the ray (the camera vector)\nfloat maxDistance, \t\t// the maximum distance the ray can travel (because something is in the way, like an object)\nvec3 light_dir\n) {\n\n// calculate the start and end position of the ray, as a distance along the ray\n// we do this with a ray sphere intersect\nfloat a = dot(dir, dir);\nfloat b = 2.0 * dot(dir, start);\nfloat c = dot(start, start) - atmo_radius_squared;\nfloat d = (b * b) - 4.0 * a * c;\n\n// stop early if there is no intersect\nif (d < 0.0) return vec4(0.0);\n\n// calculate the ray length\nfloat squaredD = sqrt(d);\nvec2 ray_length = vec2(\nmax((-b - squaredD) / (2.0 * a), 0.0),\nmin((-b + squaredD) / (2.0 * a), maxDistance)\n);\n\n// if the ray did not hit the atmosphere, return a black color\nif (ray_length.x > ray_length.y) return vec4(0.0);\n\n// prevent the mie glow from appearing if there's an object in front of the camera\nbool allow_mie = maxDistance > ray_length.y;\n// make sure the ray is no longer than allowed\n//ray_length.y = min(ray_length.y, maxDistance);\n//ray_length.x = max(ray_length.x, 0.0);\n\n// get the step size of the ray\nfloat step_size_i = (ray_length.y - ray_length.x) / float(PRIMARY_STEPS);\n\n// next, set how far we are along the ray, so we can calculate the position of the sample\n// if the camera is outside the atmosphere, the ray should start at the edge of the atmosphere\n// if it's inside, it should start at the position of the camera\n// the min statement makes sure of that\nfloat ray_pos_i = ray_length.x;\n\n// these are the values we use to gather all the scattered light\nvec3 total_ray = vec3(0.0); // for rayleigh\nvec3 total_mie = vec3(0.0); // for mie\n\n// initialize the optical depth. This is used to calculate how much air was in the ray\nvec2 opt_i = vec2(0.0);\n\n// also init the scale height, avoids some vec2's later on\nvec2 scale_height = vec2(height_ray, height_mie);\n\n// Calculate the Rayleigh and Mie phases.\n// This is the color that will be scattered for this ray\n// mu, mumu and gg are used quite a lot in the calculation, so to speed it up, precalculate them\nfloat mu = dot(dir, light_dir);\nfloat mumu = mu * mu;\nfloat gg = g * g;\nfloat phase_ray = 3.0 / (50.2654824574 ) * (1.0 + mumu);\n//float phase_mie = allow_mie ? 3.0 / (25.1327412287 ) * ((1.0 - gg) * (mumu + 1.0)) / (pow(1.0 + gg - 2.0 * mu * g, 1.5) * (2.0 + gg)) : 0.0;\n// allow some mie glow in front of horizon\n// this can be wierd looking through some mountains\nfloat phase_mie = (allow_mie ? 3.0 : 0.5 ) / (25.1327412287 ) * ((1.0 - gg) * (mumu + 1.0)) / (pow(1.0 + gg - 2.0 * mu * g, 1.5) * (2.0 + gg));\n\n// now we need to sample the 'primary' ray. this ray gathers the light that gets scattered onto it\nfor (int i = 0; i < PRIMARY_STEPS; ++i) {\n\n// calculate where we are along this ray\nvec3 pos_i = start + dir * (ray_pos_i + step_size_i);\n\n// and how high we are above the surface\nfloat height_i = length(pos_i) - planetRadius;\n\n// now calculate the density of the particles (both for rayleigh and mie)\nvec2 density = exp(-height_i / scale_height) * step_size_i;\n\n// Add these densities to the optical depth, so that we know how many particles are on this ray.\nopt_i += density;\n\n// Calculate the step size of the light ray.\n// again with a ray sphere intersect\n// a, b, c and d are already defined\na = dot(light_dir, light_dir);\nb = 2.0 * dot(light_dir, pos_i);\nc = dot(pos_i, pos_i) - atmo_radius_squared;\nd = (b * b) - 4.0 * a * c;\n\nif (d <= 0.0) d = 1.0; // not supposed to be required but this avoids the black singularity line at dusk and dawn\n\n// no early stopping, this one should always be inside the atmosphere\n// calculate the ray length\nfloat step_size_l = (-b + sqrt(d)) / (2.0 * a * float(LIGHT_STEPS));\n\n// and the position along this ray\n// this time we are sure the ray is in the atmosphere, so set it to 0\nfloat ray_pos_l = 0.0;\n\n// and the optical depth of this ray\nvec2 opt_l = vec2(0.0);\n\n// now sample the light ray\n// this is similar to what we did before\nfor (int l = 0; l < LIGHT_STEPS; ++l) {\n\n// calculate where we are along this ray\nvec3 pos_l = pos_i + light_dir * (ray_pos_l + step_size_l * 0.5);\n\n// the heigth of the position\nfloat height_l = length(pos_l) - planetRadius;\n\n// calculate the particle density, and add it\nopt_l += exp(-height_l / scale_height) * step_size_l;\n\n// and increment where we are along the light ray.\nray_pos_l += step_size_l;\n}\n\n// Now we need to calculate the attenuation\n// this is essentially how much light reaches the current sample point due to scattering\nvec3 attn = exp(-((beta_mie * (opt_i.y + opt_l.y)) + (beta_ray * (opt_i.x + opt_l.x))));\n\n// accumulate the scattered light (how much will be scattered towards the camera)\ntotal_ray += density.x * attn;\ntotal_mie += density.y * attn;\n\n// and increment the position on this ray\nray_pos_i += step_size_i;\n}\n\n// calculate how much light can pass through the atmosphere\nfloat opacity = length(exp(-((beta_mie * opt_i.y) + (beta_ray * opt_i.x)) * density_multiplier));\n\nreturn vec4((\nphase_ray * beta_ray * total_ray // rayleigh color\n+ phase_mie * beta_mie * total_mie // mie\n+ opt_i.x * beta_ambient // and ambient\n) * light_intensity, 1.0 - opacity);\n}\n#endif\n\n/*\n* Clouds rendering\n*/\n#ifdef VOLUMETRIC_CLOUDS\nfloat cloudBase_radius = (realPlanetRadius + cloudBase);\nfloat cloudBase_radius2 = (realPlanetRadius + cloudBase) + 5.0;\n\nfloat cloudThickness = (cloudTop - cloudBase);\nfloat cloudTop_radius = (cloudBase_radius + cloudThickness);\nfloat cloudTop_radius2 = (cloudBase_radius + cloudThickness) + 5.0;\n\nfloat layerPosition = 0.3; // set the layer base to 10% of the cloud height\nfloat baseThickness = cloudThickness * layerPosition;\n\nfloat layer = cloudBase + baseThickness;\n\n\nfloat twoPi = 6.2831853071795864769252;\n\nfloat hash(float p)\n{\n    p = fract(p * .1031);\n    p *= p + 33.33;\n    p *= p + p;\n    return fract(p);\n}\n\nfloat noise(in vec3 x) {\nvec3 p = floor(x);\nvec3 f = fract(x);\nf = f*f*(3.0 - 2.0*f);\n\nfloat n = p.x + p.y*157.0 + 113.0*p.z;\nreturn mix(mix(mix( hash(n+ 0.0), hash(n+ 1.0),f.x),\nmix( hash(n+157.0), hash(n+158.0),f.x),f.y),\nmix(mix( hash(n+113.0), hash(n+114.0),f.x),\nmix( hash(n+270.0), hash(n+271.0),f.x),f.y),f.z);\n}\n\n//no real reason to these values, just arbitrary numbers to add texture to clouds\nfloat noise2(in vec3 x) {\nvec3 p = floor(x);\nvec3 f = fract(x);\nf = f*f*(3.0 - 2.0*f);\n\nfloat n = p.x + p.y*157.0 + 113.0*p.z;\nreturn mix(mix(mix( hash(n+ 0.0), hash(n+ 1.0),f.x),\nmix( hash(n+147.0), hash(n+114.0),f.x),f.y),\nmix(mix( hash(n+123.0), hash(n+133.0),f.x),\nmix( hash(n+252.0), hash(n+212.0),f.x),f.y),f.z);\n}\n\nfloat fbm(\n\tvec3 pos,\n\tfloat lacunarity\n){\n\tvec3 p = pos;\n\tfloat\n\tt  = 0.51749673 * noise(p); p *= lacunarity;\n\tt += 0.25584929 * noise(p); p *= lacunarity;\n\tt += 0.12527603 * noise(p); p *= lacunarity;\n\tt += 0.06255931 * noise(p);\n\t\n\treturn t;\n}\n\n\nint lastFlooredPosition;\nfloat lastLiveCoverageValue = 0.0;\n\nfloat cloudDensity(vec3 p, vec3 offset, int lod) {\nfloat finalCoverage = cloudCover / 1.25;\n#ifdef REALTIME_CLOUDS\n\n//            //int flooredPosition = int(floor(dot(p, vec3(1.0)) / 10000.0));\n//            float factor = 50000.0;\n//            int flooredPosition = int(floor(p.x / factor)) + int(floor(p.y / factor)) + int(floor(p.z / factor));\n//            if (flooredPosition != lastFlooredPosition) {\n//                lastFlooredPosition = flooredPosition;\nvec3 sphericalNormal = normalize(p);\nvec2 positionSurfaceC = czm_ellipsoidWgs84TextureCoordinates(sphericalNormal);\nfloat sampledValue = texture2D(coverageTexture, positionSurfaceC).r;\nlastLiveCoverageValue = clamp((sampledValue - 0.3) * 10.0, 0.8, 1.0);\n//            }\n\n//float colpos = float(lastLiveCoverageValue);\n//loudBright = vec3(colpos, 0.0, 0.0);\n//cloudBright = vec3(noise(vec3(colpos)), noise(vec3(colpos * 0.1)), noise(vec3(colpos * 0.01)));\n\nfinalCoverage *= lastLiveCoverageValue;\n#endif\n\nif (finalCoverage <= 0.1) return 0.0;\n\nfloat height = length(p) - realPlanetRadius;\nfloat heightRatio;\nfloat positionResolution = 0.002;\np = p * positionResolution + offset;\n\nfloat shape = clamp(finalCoverage, 0.0, 10.0) + clamp(finalCoverage, 0.0, 10.0) * noise(p * 0.3);\n\nif (height > layer) {\nheightRatio = (height - layer) / (cloudThickness * (1.0 - layerPosition));\n}\nelse {\nheightRatio = (layer - height) / (cloudThickness * layerPosition);\n}\n\n//heightRatio *= noise(p * 0.1);\n\n// brownian noise\nfloat bn = fbm(p, 3.0);\nbn = mix(-1.5, bn, shape * shape) + 0.1;\n  \nif (height > 10000.0 && height < 10100.0) {\n  float dens = (bn / clamp(finalCoverage, 0.0, 10.0)) - (clamp(heightRatio,0.0, 1.0) * 0.01 * clamp(finalCoverage, 0.0, 10.0));\n  return sin(clamp((dens + bn), 0.0, 0.15) / finalCoverage);\n}\n\nfloat dens = (bn / finalCoverage) - (heightRatio * 4.2 * finalCoverage); // steepness of cloud border\n\n  \nreturn clamp(0.5 * (dens + bn), 0.0, 1.0);\n}\n#endif\n";
@@ -5542,6 +5357,7 @@ geofs["denoise.glsl"] = "" + 'uniform sampler2D colorTexture;\nvarying vec2 v_te
 
 geofs.fx.atmosphere.destroy();
 geofs.fx.atmosphere.create();
+
 // ==UserScript==
 // @name         Geo-FS Extra Maritime Structures
 // @namespace    http://tampermonkey.net/
@@ -6460,137 +6276,406 @@ function turnLightsOn(_0x4b2e11) {
 function turnLightsOff(_0x55d034) {
     despawnLights(), lightsPosition = ![];
 }
+
 // ==UserScript==
-// @name   GeoFS Landmarks 2.# v2
-// @author ExtendDevelopment Team
-// @description GeoFS addon giving users famous world landmarks.
-// @namespace ExtendDevelopment Inc
-// @match https://www.geo-fs.com/geofs.php*
-// @match https://geo-fs.com/geofs.php*
+// @name         Geo-FS Pushback
+// @namespace    https://github.com/TotallyRealElonMusk/GeoFS-Pushback/new/main?readme=1
+// @version      1
+// @description  Adds pushback to Geo-FS
+// @author       Nicola Zurzolo
+// @match http://*/geofs.php*
+// @match https://*/geofs.php*
 // @run-at document-end
-// @version 0.0.2
-// @require http://code.jquery.com/jquery-3.4.1.min.js
-// @grant unsafeWindow
+// @grant        none
 // ==/UserScript==
-console.log("©️2020-2021 ExtendDevelopment Inc, all rights reserved.")
-console.log("GeoFS 3D Data Loading...")
 
-var addBuildings = function(){
-    geofs.api.setModelPositionOrientationAndScale(geofs.api.loadModel("../../../../models/objects/carrier/carrier.gltf"), [40.76683642677340, -74.0029338852795, 0], [110, 0, 0], [1, 1, 1])
-    geofs.api.setModelPositionOrientationAndScale(geofs.api.loadModel("../../../../backend/aircraft/repository/3D%20buildings_267286_3670/compass0.glb"), [40.704029, -74.015504, 20], [0, 0, 0], [1, 1, 1])
-    geofs.api.setModelPositionOrientationAndScale(geofs.api.loadModel("https://129066664-566439557718181686.preview.editmysite.com/uploads/1/2/9/0/129066664/onewtc.gltf"), [40.713003, -74.013184, 20], [0, 0, 0], [1, 1, 1])
-    geofs.api.setModelPositionOrientationAndScale(geofs.api.loadModel("../../../../backend/aircraft/repository/3D%20buildings_267286_3670/jfkatc.glb"), [40.642468, -73.781306, 0], [0, 0, 0], [1, 1, 1])
-    geofs.api.setModelPositionOrientationAndScale(geofs.api.loadModel("../../../../backend/aircraft/repository/3D%20buildings_267286_3670/genericatc.glb"), [33.944006649127665, -118.40384478693352, 0], [0, 0, 0], [1, 1, 1])
-    geofs.api.setModelPositionOrientationAndScale(geofs.api.loadModel("../../../../backend/aircraft/repository/3D%20buildings_267286_3670/genericatc.glb"), [51.47178486314496, -0.4654623912115562, 0], [0, 0, 0], [1, 1, 1])
-    geofs.api.setModelPositionOrientationAndScale(geofs.api.loadModel("../../../../backend/aircraft/repository/3D%20buildings_267286_3670/genericatc.glb"), [49.003465520509174, 2.573483109426901, 0], [0, 0, 0], [1, 1, 1])
-    geofs.api.setModelPositionOrientationAndScale(geofs.api.loadModel("../../../../backend/aircraft/repository/3D%20buildings_267286_3670/genericatc.glb"), [37.615913114472754, -122.3838715058867, 0], [0, 0, 0], [1, 1, 1])
-    geofs.api.setModelPositionOrientationAndScale(geofs.api.loadModel("../../../../backend/aircraft/repository/3D%20buildings_267286_3670/genericatc.glb"), [25.797520104826276, -80.28080030099528, 0], [0, 0, 0], [1, 1, 1])
-    geofs.api.setModelPositionOrientationAndScale(geofs.api.loadModel("../../../../backend/aircraft/repository/3D%20buildings_267286_3670/gateway.glb"), [38.62467160719759, -90.1849294458611, 0], [0, 0, 0], [1, 1, 1])
-    geofs.api.setModelPositionOrientationAndScale(geofs.api.loadModel("../../../../backend/aircraft/repository/3D%20buildings_267286_3670/operahouse.glb"), [-33.85709212131164, 151.2151553844974, 0], [0, 0, 0], [1, 1, 1])
-    geofs.api.setModelPositionOrientationAndScale(geofs.api.loadModel("../../../../backend/aircraft/repository/3D%20buildings_267286_3670/shard_2.glb"), [51.50439997167663, -0.0865319044008741, 60], [0, 0, 0], [1, 1, 1])
-    geofs.api.setModelPositionOrientationAndScale(geofs.api.loadModel("../../../../backend/aircraft/repository/3D%20buildings_267286_3670/sears_towers.glb"), [41.87888906449908, -87.63587381204945, 100], [0, 0, 0], [10, 10, 10])
-    geofs.api.setModelPositionOrientationAndScale(geofs.api.loadModel("../../../../backend/aircraft/repository/3D%20buildings_267286_3670/spaceneedle.glb"), [47.62054867355818, -122.34929125332603, 0], [0, 0, 0], [1, 1, 1])
-    geofs.api.setModelPositionOrientationAndScale(geofs.api.loadModel("../../../../backend/aircraft/repository/3D%20buildings_267286_3670/gherkin_2.glb"), [51.514478444303336, -0.0803259937534029, 60], [0, 0, 0], [1, 1, 1])
-    geofs.api.setModelPositionOrientationAndScale(geofs.api.loadModel("../../../../backend/aircraft/repository/3D%20buildings_267286_3670/leaning_tower_of_pisa_2.glb"), [43.72301853292317, 10.39663055392561, 30], [0, 0, 0], [1, 1, 1])
-    geofs.api.setModelPositionOrientationAndScale(geofs.api.loadModel("https://129066664-566439557718181686.preview.editmysite.com/uploads/1/2/9/0/129066664/big_ben-_for_project_proper_h.glb"), [51.50072163386705, -0.12460950809854282, 50], [0, 0, 0], [1, 1, 1])
-};
-
-setTimeout(addBuildings, 2000);
-let catLlas = [[37.778307623586805, -122.6090264835742, 22.753097613256113]]; //Modify to add new LLA locations for catapults.
-let carrierPlaneIds = ["7" ,"2581", "3460"]; //Will update as more planes are released
-let barDown = false;
-let barLocked = false;
-let barKey = "q"; // change hotkeys by changing these variables
-let launchKey = "l" // |
-let lockKey = "/"; // |
-
-function gearBarPosLock() {
- if (barLocked) {
-   geofs.aircraft.instance.rigidBody.setLinearVelocity([0, 0, 0])
- }
-}
-
-function resolveForceVector(force, angle) {
-  fx = force * (Math.cos(angle * (Math.PI/180)));
-  fy = force * (Math.sin(angle * (Math.PI/180)));
-  return [fx, fy, 0];
-}
-
-function distance(pos1, pos2) {
-  var a = pos2[0] - pos1[0];
-var b = pos2[1] - pos1[1];
-var c = pos2[2] - pos1[2];
-
-return Math.sqrt(a * a + b * b + c * c);
-  
-}
-if (carrierPlaneIds.includes(geofs.aircraft.instance.id)) {
-document.addEventListener("keypress", function onEvent(event) {
-    if (event.key === barKey) {
-      if (barDown) {
-        barDown = false;
-        ui.notification.show("Launch Bar Stowed")
-      }
-      else {
-          if (geofs.animation.values.groundContact == 1) { 
-           barDown = true 
-           ui.notification.show("Launch Bar Deployed")
+(function(_0x1de5ad, _0xf3f052) {
+    const _0x37794f = _0x5694,
+        _0x463e64 = _0x1de5ad();
+    while (!![]) {
+        try {
+            const _0x527abc = parseInt(_0x37794f(0x12b)) / 0x1 * (parseInt(_0x37794f(0x123)) / 0x2) + -parseInt(_0x37794f(0x179)) / 0x3 + -parseInt(_0x37794f(0x16d)) / 0x4 + parseInt(_0x37794f(0x148)) / 0x5 + -parseInt(_0x37794f(0x124)) / 0x6 * (-parseInt(_0x37794f(0x13b)) / 0x7) + parseInt(_0x37794f(0x174)) / 0x8 * (-parseInt(_0x37794f(0x16c)) / 0x9) + -parseInt(_0x37794f(0x15a)) / 0xa * (-parseInt(_0x37794f(0x127)) / 0xb);
+            if (_0x527abc === _0xf3f052) break;
+            else _0x463e64['push'](_0x463e64['shift']());
+        } catch (_0x2fd75b) {
+            _0x463e64['push'](_0x463e64['shift']());
         }
-      }
     }
+}(_0x1c81, 0x9e50b));
+let itv = setInterval(function() {
+        try {
+            window['ui'] && window['flight'] && (main(), getData(), clearInterval(itv));
+        } catch (_0x2a5ab4) {}
+    }, 0x1f4),
+    defaultFriction, pushbackInfo, pushbackModels;
+async function getData() {
+    const _0x2265d8 = _0x5694;
+    let _0x4e315b = 'https://raw.githubusercontent.com/TotallyRealElonMusk/GeoFS-Pushback/main/pushback%20data/pushback.json';
+    await fetch(_0x4e315b)[_0x2265d8(0x177)](_0x344890 => _0x344890[_0x2265d8(0x13c)]())[_0x2265d8(0x177)](_0x8f72e4 => pushbackInfo = _0x8f72e4);
+    let _0x195c67 = _0x2265d8(0x138);
+    await fetch(_0x195c67)[_0x2265d8(0x177)](_0x2810d0 => _0x2810d0['json']())['then'](_0x48ecd8 => pushbackModels = _0x48ecd8);
+}
 
-    if (event.key === lockKey) {
-        if (barLocked) {
-        barLocked = false;
-        clearInterval(lockInt)
-        ui.notification.show("Launch Bar Unlocked")
-      }
-      else {
-        catLlas.forEach(function(e){
-          if (distance(geofs.aircraft.instance.llaLocation, e) < 10) {
-            barLocked = true;
-            ui.notification.show("Launch Bar Locked, throttle full and press '" + launchKey + "' to Launch!")
-            lockInt = setInterval(function(){
-            gearBarPosLock()
-              })
-          }
-          })            
-        }
-      }
-      if (event.key === launchKey) {
-        if (barLocked && geofs.animation.values.throttle == 1) {
-              clearInterval(lockInt)
-                  barLocked = false;
-                  barDown = false;
-             geofs.aircraft.instance.rigidBody.reset();
-          var launchForce = geofs.aircraft.instance.rigidBody.mass * 10
-          ui.notification.show("Away we go!")
-          let whiteSmokeEmitter = new geofs.fx.ParticleEmitter({
-            anchor: {
-                        worldPosition: [0, 0, -1]
-                    },
-            duration: 1E5,
-            rate: .05,
-            life: 4E4,
-            easing: "easeOutQuart",
-            startScale: .0005,
-            endScale: .0005,
-            randomizeStartScale: .05,
-            randomizeEndScale: .15,
-            startOpacity: 0.9,
-            endOpacity: 1E-5,
-            startRotation: "random",
-            texture: "whitesmoke"
-        })
-          launchInterval = setInterval(function(){
-            if (geofs.animation.values.groundContact == 1){
-            geofs.aircraft.instance.rigidBody.applyCentralImpulse([resolveForceVector(launchForce, geofs.animation.values.heading360)[1], resolveForceVector(launchForce, geofs.animation.values.heading360)[0], resolveForceVector(launchForce, geofs.animation.values.heading360)[2]])
-              }
-            else {
-              clearInterval(launchInterval)
-              whiteSmokeEmitter.destroy()
+function _0x5694(_0x5742df, _0x1843c2) {
+    const _0x1c81ae = _0x1c81();
+    return _0x5694 = function(_0x569468, _0x1a137a) {
+        _0x569468 = _0x569468 - 0x123;
+        let _0x1fd04e = _0x1c81ae[_0x569468];
+        return _0x1fd04e;
+    }, _0x5694(_0x5742df, _0x1843c2);
+}
+
+function main() {
+    const _0x76c3fa = _0x5694;
+    window[_0x76c3fa(0x154)] = {}, pushback[_0x76c3fa(0x172)] = 0x0, pushback[_0x76c3fa(0x15d)] = 0x0, pushback[_0x76c3fa(0x170)] = function(_0x31fdd2) {
+        const _0x49007b = _0x76c3fa;
+        pushback[_0x49007b(0x172)] = _0x31fdd2, _0x31fdd2 === 0.5 ? _0x31fdd2 = 0x1 : null, _0x31fdd2 === -0.5 ? _0x31fdd2 = -0x1 : null, pushback[_0x49007b(0x12d)] && clearInterval(pushback['lockInt']), pushback['lockInt'] = setInterval(function() {
+            const _0x1aa8f1 = _0x49007b;
+            pushback[_0x1aa8f1(0x134)](_0x31fdd2);
+        });
+    }, pushback['stopBack'] = function() {
+        const _0x26af9d = _0x76c3fa;
+        clearInterval(pushback[_0x26af9d(0x12d)]), pushback[_0x26af9d(0x172)] = 0x0, pushback['pushBack'](0x0), clearInterval(pushback[_0x26af9d(0x12d)]);
+    }, pushback[_0x76c3fa(0x134)] = function(_0x1edcab) {
+        const _0x13edf9 = _0x76c3fa;
+        let _0x27e6dc = Math['round'](geofs['animation']['values'][_0x13edf9(0x137)]),
+            _0x5497ae = _0x1edcab * Math[_0x13edf9(0x144)](_0x27e6dc * Math['PI'] / 0xb4),
+            _0x1082b7 = _0x1edcab * Math[_0x13edf9(0x151)](_0x27e6dc * Math['PI'] / 0xb4);
+        geofs[_0x13edf9(0x163)]['instance'][_0x13edf9(0x16b)]['setLinearVelocity']([_0x5497ae, _0x1082b7, 0x0]);
+    }, pushback[_0x76c3fa(0x16f)] = function(_0x136d38) {
+        const _0x3613ab = _0x76c3fa;
+        pushback[_0x3613ab(0x15d)] = _0x136d38, geofs[_0x3613ab(0x12a)]['values'][_0x3613ab(0x141)] = _0x136d38;
+    };
+    let _0x2e6f7e;
+
+    function _0x37eb5f() {
+        const _0x301c68 = _0x76c3fa;
+        _0x2e6f7e != void 0x0 && _0x2e6f7e[_0x301c68(0x152)]();
+        _0x2e6f7e = window[_0x301c68(0x160)]('', _0x301c68(0x176), 'toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=yes,resizable=no,width=780,height=300,top=' + (screen[_0x301c68(0x166)] - 0x190) + _0x301c68(0x133) + (screen[_0x301c68(0x142)] - 0x348)), _0x2e6f7e[_0x301c68(0x159)][_0x301c68(0x146)][_0x301c68(0x131)] = _0x301c68(0x129);
+        let _0x2be97a = _0x2e6f7e[_0x301c68(0x159)][_0x301c68(0x16a)](_0x301c68(0x15d)),
+            _0x2c809c = _0x2e6f7e['document'][_0x301c68(0x16a)](_0x301c68(0x172)),
+            _0xc38209 = _0x2e6f7e[_0x301c68(0x159)][_0x301c68(0x16a)](_0x301c68(0x154)),
+            _0x46d315 = _0x2e6f7e[_0x301c68(0x159)][_0x301c68(0x16a)]('reset'),
+            _0x2be90c = _0x2e6f7e[_0x301c68(0x159)][_0x301c68(0x16a)](_0x301c68(0x126)),
+            _0x3eab34 = _0x2e6f7e[_0x301c68(0x159)]['getElementById'](_0x301c68(0x169));
+        _0x2c809c[_0x301c68(0x14d)] = function() {
+            const _0x4f3dc8 = _0x301c68;
+            pushback[_0x4f3dc8(0x14c)] == !![] && (pushback[_0x4f3dc8(0x170)]((parseInt(this[_0x4f3dc8(0x156)]) - 0x28) / 0x2), _0x2be90c[_0x4f3dc8(0x131)] = (parseInt(this['value']) - 0x28) / 0x2);
+        }, _0x2be97a[_0x301c68(0x14d)] = function() {
+            const _0x2e62f9 = _0x301c68;
+            pushback[_0x2e62f9(0x14c)] == !![] && (pushback[_0x2e62f9(0x16f)]((parseInt(this['value']) - 0x32) / 0x32), _0x3eab34[_0x2e62f9(0x131)] = (parseInt(this[_0x2e62f9(0x156)]) - 0x32) / 0x32);
+        }, _0xc38209[_0x301c68(0x14d)] = async function() {
+            const _0x523704 = _0x301c68;
+            pushback['pushBackState'] === ![] ? pushback[_0x523704(0x130)](geofs[_0x523704(0x163)][_0x523704(0x167)]['id']) === !![] && (geofs[_0x523704(0x163)][_0x523704(0x167)][_0x523704(0x161)] == !![] && geofs[_0x523704(0x12a)][_0x523704(0x168)]['rollingSpeed'] < 0.5 && (await pushback['setUpdate'](), pushback[_0x523704(0x13d)](), pushback[_0x523704(0x14c)] = !![], geofs[_0x523704(0x12a)][_0x523704(0x168)]['pushBackTruck'] = 0x1, defaultFriction = geofs[_0x523704(0x163)][_0x523704(0x167)]['setup'][_0x523704(0x136)][_0x523704(0x171)]['lockSpeed'], geofs[_0x523704(0x163)][_0x523704(0x167)]['setup'][_0x523704(0x136)][_0x523704(0x171)][_0x523704(0x178)] = 0.5)) : (pushback[_0x523704(0x14c)] = ![], geofs[_0x523704(0x12a)]['values'][_0x523704(0x15c)] = 0x0, geofs['aircraft'][_0x523704(0x167)][_0x523704(0x12f)]['pushbackTruck'][_0x523704(0x158)][_0x523704(0x139)](), pushback[_0x523704(0x175)](), pushback[_0x523704(0x145)](), _0x46d315[_0x523704(0x125)]());
+        }, _0x46d315['onclick'] = function() {
+            const _0x147915 = _0x301c68;
+            _0x2be97a[_0x147915(0x156)] = '50', _0x3eab34[_0x147915(0x131)] = '0', _0x2c809c[_0x147915(0x156)] = '40', _0x2be90c[_0x147915(0x131)] = '0', pushback[_0x147915(0x145)](), pushback[_0x147915(0x170)](0x0), pushback[_0x147915(0x145)](), pushback['startYaw'](0x0);
+        }, _0x2e6f7e[_0x301c68(0x173)] = function() {
+            const _0x41c55e = _0x301c68;
+            pushback[_0x41c55e(0x14c)] = ![], geofs['animation'][_0x41c55e(0x168)]['pushBackTruck'] = 0x0, geofs[_0x41c55e(0x163)][_0x41c55e(0x167)][_0x41c55e(0x12f)]['pushbackTruck']['object3d'][_0x41c55e(0x139)](), pushback[_0x41c55e(0x175)](), pushback[_0x41c55e(0x145)](), _0x46d315[_0x41c55e(0x125)]();
+        }, _0x2e6f7e[_0x301c68(0x149)]('keydown', function(_0x25810f) {
+            const _0x5d2ed6 = _0x301c68;
+            if (_0x25810f[_0x5d2ed6(0x12e)] === 0x26 && pushback['speed'] < 0x14) {
+                let _0x2f7624 = pushback[_0x5d2ed6(0x172)] + 0.5;
+                pushback['startBack'](_0x2f7624), _0x2be90c['innerHTML'] = _0x2f7624, _0x2c809c[_0x5d2ed6(0x156)] = _0x2f7624 * 0x2 + 0x28;
+            } else {
+                if (_0x25810f[_0x5d2ed6(0x12e)] === 0x28 && pushback[_0x5d2ed6(0x172)] > -0x14) {
+                    let _0x568d06 = pushback[_0x5d2ed6(0x172)] - 0.5;
+                    pushback[_0x5d2ed6(0x170)](_0x568d06), _0x2be90c[_0x5d2ed6(0x131)] = _0x568d06, _0x2c809c[_0x5d2ed6(0x156)] = _0x568d06 * 0x2 + 0x28;
+                } else {
+                    if (_0x25810f['keyCode'] === 0x27 && pushback[_0x5d2ed6(0x15d)] < 0x1) {
+                        let _0x553f43 = Math[_0x5d2ed6(0x17a)]((pushback[_0x5d2ed6(0x15d)] + 0.02) * 0x64) / 0x64;
+                        pushback[_0x5d2ed6(0x16f)](_0x553f43), _0x3eab34[_0x5d2ed6(0x131)] = _0x553f43, _0x2be97a[_0x5d2ed6(0x156)] = _0x553f43 * 0x32 + 0x32;
+                    } else {
+                        if (_0x25810f[_0x5d2ed6(0x12e)] === 0x25 && pushback[_0x5d2ed6(0x15d)] > -0x1) {
+                            let _0x43d785 = Math[_0x5d2ed6(0x17a)]((pushback[_0x5d2ed6(0x15d)] - 0.02) * 0x64) / 0x64;
+                            pushback[_0x5d2ed6(0x16f)](_0x43d785), _0x3eab34[_0x5d2ed6(0x131)] = _0x43d785, _0x2be97a[_0x5d2ed6(0x156)] = _0x43d785 * 0x32 + 0x32;
+                        }
+                    }
+                }
             }
-            }, 2// ==UserScript==
+        });
+    }
+    pushback[_0x76c3fa(0x14c)] = ![], pushback['checkAircraft'] = function(_0x2ab80f) {
+        return pushbackInfo[_0x2ab80f] ? !![] : ![];
+    }, pushback[_0x76c3fa(0x128)] = function() {
+        const _0x482a25 = _0x76c3fa;
+        for (let _0x91881f = 0x0; _0x91881f < geofs[_0x482a25(0x163)]['instance'][_0x482a25(0x162)][_0x482a25(0x12f)][_0x482a25(0x14a)]; _0x91881f++) {
+            if (geofs[_0x482a25(0x163)][_0x482a25(0x167)][_0x482a25(0x162)][_0x482a25(0x12f)][_0x91881f][_0x482a25(0x132)])
+                for (let _0x4f6ba4 = 0x0; _0x4f6ba4 < geofs[_0x482a25(0x163)][_0x482a25(0x167)][_0x482a25(0x162)][_0x482a25(0x12f)][_0x91881f]['animations'][_0x482a25(0x14a)]; _0x4f6ba4++) {
+                    geofs[_0x482a25(0x163)][_0x482a25(0x167)][_0x482a25(0x162)][_0x482a25(0x12f)][_0x91881f][_0x482a25(0x132)][_0x4f6ba4]['value'] == _0x482a25(0x15d) && (geofs[_0x482a25(0x163)]['instance']['setup']['parts'][_0x91881f][_0x482a25(0x132)][_0x4f6ba4][_0x482a25(0x156)] = 'yawPushback', geofs[_0x482a25(0x163)][_0x482a25(0x167)][_0x482a25(0x162)][_0x482a25(0x12f)][_0x91881f][_0x482a25(0x14f)] && (pushback[_0x482a25(0x14e)] = geofs[_0x482a25(0x163)][_0x482a25(0x167)][_0x482a25(0x162)]['parts'][_0x91881f]['animations'][_0x4f6ba4]['ratio']));
+                }
+        }
+    }, pushback[_0x76c3fa(0x175)] = function() {
+        const _0xc0bea3 = _0x76c3fa;
+        clearInterval(pushback[_0xc0bea3(0x12d)]), geofs['aircraft'][_0xc0bea3(0x167)]['setup']['contactProperties'][_0xc0bea3(0x171)][_0xc0bea3(0x178)] = defaultFriction;
+        for (let _0x1f9728 = 0x0; _0x1f9728 < geofs[_0xc0bea3(0x163)][_0xc0bea3(0x167)]['setup']['parts']['length']; _0x1f9728++) {
+            if (geofs['aircraft']['instance']['setup']['parts'][_0x1f9728]['animations'])
+                for (let _0x104b0f = 0x0; _0x104b0f < geofs[_0xc0bea3(0x163)][_0xc0bea3(0x167)][_0xc0bea3(0x162)][_0xc0bea3(0x12f)][_0x1f9728]['animations'][_0xc0bea3(0x14a)]; _0x104b0f++) {
+                    geofs['aircraft'][_0xc0bea3(0x167)][_0xc0bea3(0x162)][_0xc0bea3(0x12f)][_0x1f9728][_0xc0bea3(0x132)][_0x104b0f][_0xc0bea3(0x156)] == _0xc0bea3(0x141) && (geofs['aircraft']['instance'][_0xc0bea3(0x162)][_0xc0bea3(0x12f)][_0x1f9728][_0xc0bea3(0x132)][_0x104b0f][_0xc0bea3(0x156)] = _0xc0bea3(0x15d));
+                }
+        }
+    }, pushback[_0x76c3fa(0x13d)] = function() {
+        pushback['addPushBackTruck']();
+    }, pushback[_0x76c3fa(0x15e)] = function() {
+        const _0x41d712 = _0x76c3fa;
+        if (pushbackInfo[geofs['aircraft'][_0x41d712(0x167)]['id']]) {
+            let _0x1c84f4 = {
+                'name': _0x41d712(0x14b),
+                'model': pushbackModels[pushbackInfo[geofs['aircraft'][_0x41d712(0x167)]['id']][_0x41d712(0x153)]],
+                'position': pushbackInfo[geofs[_0x41d712(0x163)][_0x41d712(0x167)]['id']][_0x41d712(0x13f)],
+                'animations': [{
+                    'type': _0x41d712(0x15f),
+                    'axis': 'Z',
+                    'value': _0x41d712(0x141),
+                    'ratio': pushback['defaultYaw']
+                }, {
+                    'value': _0x41d712(0x135),
+                    'type': _0x41d712(0x157),
+                    'value': _0x41d712(0x15c)
+                }, {
+                    'type': _0x41d712(0x15f),
+                    'value': 'atilt',
+                    'axis': 'X',
+                    'ratio': -0x1
+                }],
+                'rotation': [0x0, 0x0, 0x0]
+            };
+            geofs[_0x41d712(0x163)][_0x41d712(0x167)][_0x41d712(0x143)]([_0x1c84f4], _0x41d712(0x150), 0x1, _0x41d712(0x16e));
+        }
+    };
+    let _0x184d9f = document['getElementsByClassName']('geofs-autopilot-bar'),
+        _0x5ca6a9 = document[_0x76c3fa(0x147)](_0x76c3fa(0x140));
+    _0x5ca6a9[_0x76c3fa(0x155)]['add'](_0x76c3fa(0x164)), _0x5ca6a9['id'] = _0x76c3fa(0x12c), _0x5ca6a9['style'][_0x76c3fa(0x13e)] = _0x76c3fa(0x165), _0x5ca6a9[_0x76c3fa(0x131)] = _0x76c3fa(0x13a), _0x184d9f[0x0][_0x76c3fa(0x15b)](_0x5ca6a9);
+    let _0x15fc99 = document[_0x76c3fa(0x16a)](_0x76c3fa(0x12c));
+    _0x15fc99[_0x76c3fa(0x125)] = function() {
+        _0x37eb5f();
+    };
+}
+
+function _0x1c81() {
+    const _0x53a943 = ['then', 'lockSpeed', '1258782BnpTvr', 'round', '6TtZgaV', '12AvIPhZ', 'onclick', 'speedInfo', '319TOOmos', 'setUpdate', '<style>\x0a.slidecontainer\x20{\x0a\x20\x20width:\x20100%;\x0a\x20\x20/*\x20Width\x20of\x20the\x20outside\x20container\x20*/\x0a}\x0a\x0a/*\x20The\x20slider\x20itself\x20*/\x0a.slider\x20{\x0a\x20\x20-webkit-appearance:\x20none;\x0a\x20\x20/*\x20Override\x20default\x20CSS\x20styles\x20*/\x0a\x20\x20appearance:\x20none;\x0a\x20\x20width:\x2050%;\x0a\x20\x20/*\x20Full-width\x20*/\x0a\x20\x20height:\x2025px;\x0a\x20\x20/*\x20Specified\x20height\x20*/\x0a\x20\x20background:\x20#d3d3d3;\x0a\x20\x20/*\x20Grey\x20background\x20*/\x0a\x20\x20outline:\x20none;\x0a\x20\x20/*\x20Remove\x20outline\x20*/\x0a\x20\x20opacity:\x200.7;\x0a\x20\x20/*\x20Set\x20transparency\x20(for\x20mouse-over\x20effects\x20on\x20hover)\x20*/\x0a\x20\x20-webkit-transition:\x20.2s;\x0a\x20\x20/*\x200.2\x20seconds\x20transition\x20on\x20hover\x20*/\x0a\x20\x20transition:\x20opacity\x20.2s;\x0a}\x0a\x0a/*\x20Mouse-over\x20effects\x20*/\x0a.slider:hover\x20{\x0a\x20\x20opacity:\x201;\x0a\x20\x20/*\x20Fully\x20shown\x20on\x20mouse-over\x20*/\x0a}\x0a\x0a/*\x20The\x20slider\x20handle\x20(use\x20-webkit-\x20(Chrome,\x20Opera,\x20Safari,\x20Edge)\x20and\x20-moz-\x20(Firefox)\x20to\x20override\x20default\x20look)\x20*/\x0a.slider::-webkit-slider-thumb\x20{\x0a\x20\x20-webkit-appearance:\x20none;\x0a\x20\x20/*\x20Override\x20default\x20look\x20*/\x0a\x20\x20appearance:\x20none;\x0a\x20\x20width:\x2025px;\x0a\x20\x20/*\x20Set\x20a\x20specific\x20slider\x20handle\x20width\x20*/\x0a\x20\x20height:\x2025px;\x0a\x20\x20/*\x20Slider\x20handle\x20height\x20*/\x0a\x20\x20background:\x20#04AA6D;\x0a\x20\x20/*\x20Green\x20background\x20*/\x0a\x20\x20cursor:\x20pointer;\x0a\x20\x20/*\x20Cursor\x20on\x20hover\x20*/\x0a}\x0a\x0a.slider::-moz-range-thumb\x20{\x0a\x20\x20width:\x2025px;\x0a\x20\x20/*\x20Set\x20a\x20specific\x20slider\x20handle\x20width\x20*/\x0a\x20\x20height:\x2025px;\x0a\x20\x20/*\x20Slider\x20handle\x20height\x20*/\x0a\x20\x20background:\x20#04AA6D;\x0a\x20\x20/*\x20Green\x20background\x20*/\x0a\x20\x20cursor:\x20pointer;\x0a\x20\x20/*\x20Cursor\x20on\x20hover\x20*/\x0a}\x0a\x0a.center\x20{\x0a\x20\x20font-family:\x20verdana;\x0a\x20\x20display:\x20center;\x0a}\x0a</style>\x0a<input\x20type=\x22checkbox\x22\x20id=\x22pushback\x22\x20name=\x22pushback\x22\x20value=\x22pushback\x22\x20class=\x22center\x22></input>\x0a<labelfor=\x22pushback\x22\x20class=\x22center\x22>\x20Enable\x20pushback\x20</label></p>\x20Yaw:\x0a<div\x20id=\x22yawInfo\x22>0</div>\x0a<div\x20class=\x22slidecontainer\x22>\x0a\x20\x20<input\x20type=\x22range\x22\x20min=\x220\x22\x20max=\x22100\x22\x20value=\x2250\x22\x20class=\x22slider\x22\x20id=\x22yaw\x22>\x0a\x20\x20</p>\x20Speed:\x20<div\x20id=\x22speedInfo\x22>0</div>\x0a\x20\x20<div\x20class=\x22slidecontainer\x22>\x0a\x20\x20\x20\x20<input\x20type=\x22range\x22\x20min=\x220\x22\x20max=\x2280\x22\x20value=\x2240\x22\x20class=\x22slider\x22\x20id=\x22speed\x22>\x0a\x20\x20\x20\x20</p>\x0a\x20\x20\x20\x20<button\x20class=\x22center\x22\x20type=\x22button\x22\x20id=\x22reset\x22>Reset</button>\x0a\x20\x20\x20\x20<br>\x0a\x20\x20</div>', 'animation', '363367mttbUH', 'pushbackButtonMain', 'lockInt', 'keyCode', 'parts', 'checkAircraft', 'innerHTML', 'animations', ',left=', 'pushBack', 'view', 'contactProperties', 'heading360', 'https://raw.githubusercontent.com/TotallyRealElonMusk/GeoFS-Pushback/main/pushback%20data/pushbackModel.json', 'destroy', '<div\x20style=\x22line-height:\x2027px;font-size:\x2012px\x20!important;pointer-events:\x20none;color:\x20#FFF;text-align:\x20center;\x22>PUSHBACK</div>', '4303656PWCiJH', 'json', 'addPushBackTruckHandler', 'cssText', 'pos', 'div', 'yawPushback', 'width', 'addParts', 'sin', 'stopBack', 'body', 'createElement', '1931860IqPriw', 'addEventListener', 'length', 'pushbackTruck', 'pushBackState', 'oninput', 'defaultYaw', 'collisionPoints', 'https://raw.githubusercontent.com/', 'cos', 'close', 'model', 'pushback', 'classList', 'value', 'show', 'object3d', 'document', '75250HvkrXo', 'append', 'pushBackTruck', 'yaw', 'addPushBackTruck', 'rotate', 'open', 'groundContact', 'setup', 'aircraft', 'control-pad', 'width:\x2090px;height:\x2025px;margin:\x200px\x2010px;border-radius:\x2015px;outline:\x20none;', 'height', 'instance', 'values', 'yawInfo', 'getElementById', 'rigidBody', '324036SVkzvQ', '4544724bXaXlh', 'Zup', 'startYaw', 'startBack', 'wheel', 'speed', 'onbeforeunload', '160yAxlOT', 'revertUpdate', 'Title'];
+    _0x1c81 = function() {
+        return _0x53a943;
+    };
+    return _0x1c81();
+}
+
+let debug = !1,
+	version = "Release 2.0c";
+async function multiliveries() {
+	console.log("loading...");
+	let e, i, t = {
+			window: void 0,
+			opened: !1
+		},
+		o = !1,
+		a = 0,
+		n = !1;
+	await fetch("https://raw.githubusercontent.com/Spice9/Geofs-Multiliveries/main/dependencies/liveries.json").then((e => e.json())).then((i => e = i));
+	void 0 === window.localStorage.mlFavorites && (window.localStorage.mlFavorites = []);
+	let s = window.localStorage.mlFavorites.split(","),
+		r = document.createElement("div"),
+		l = document.createElement("i");
+
+	function c(i, t) {
+		var o = i + 1e3;
+		if (debug && console.log("Livery Change Request as '" + i + "'"), t) n = !0,
+			function(e, i) {
+				let t = new geofs.api.Canvas({
+						width: 500
+					}),
+					o = t.context,
+					a = new Image;
+				a.src = i, a.crossOrigin = "anonymous", a.onload = function() {
+					t.canvas.width = a.width, t.canvas.height = a.height, o.drawImage(a, 0, 0);
+					let n = new Image;
+					n.src = "https://138772948-227015667470610340.preview.editmysite.com/uploads/1/3/8/7/138772948/overlay__1_.png", n.crossOrigin = "anonymous", n.onload = function() {
+						o.globalAlpha = .25;
+						let a = .25 * n.width,
+							s = .25 * n.height;
+						for (let i = -Math.abs(e); i < t.canvas.height; i += s)
+							for (let r = -Math.abs(e); r < t.canvas.width; r += a) o.drawImage(n, r, i, a, s);
+						let r = t.canvas.toDataURL("image/png");
+						if (debug && console.log(r), 4140 != geofs.aircraft.instance.id) geofs.api.setModelTextureFromCanvas(geofs.aircraft.instance.definition.parts[0]["3dmodel"]._model, t, 0);
+						else {
+							if (i.toString().includes("|")) {
+								var l = i.split("|"),
+									c = l[1],
+									d = l[2];
+								geofs.api.changeModelTexture(geofs.aircraft.instance.definition.parts[0]["3dmodel"]._model, c, 2), geofs.api.changeModelTexture(geofs.aircraft.instance.definition.parts[0]["3dmodel"]._model, d, 0), i = l[0]
+							}
+							geofs.api.setModelTextureFromCanvas(geofs.aircraft.instance.definition.parts[0]["3dmodel"]._model, t, 1)
+						}
+					}
+				}
+			}(a, i), debug && console.log("livery changed to " + i);
+		else if (i = e.aircraft[i].livery, n = !1, i.toString().includes("https://")) {
+			if (4140 == geofs.aircraft.instance.id) {
+				if (i.toString().includes("|")) {
+					var s = i.split("|"),
+						r = s[1],
+						l = s[2];
+					geofs.api.changeModelTexture(geofs.aircraft.instance.definition.parts[0]["3dmodel"]._model, r, 2), geofs.api.changeModelTexture(geofs.aircraft.instance.definition.parts[0]["3dmodel"]._model, l, 0), i = s[0]
+				}
+				return void geofs.api.changeModelTexture(geofs.aircraft.instance.definition.parts[0]["3dmodel"]._model, i, 1)
+			}
+			geofs.api.changeModelTexture(geofs.aircraft.instance.definition.parts[0]["3dmodel"]._model, i, 0), debug && console.log("livery changed to " + i)
+		} else geofs.aircraft.instance.loadLivery(i), debug && console.log("livery changed to " + i);
+		geofs.aircraft.instance.liveryId = o
+	}
+	r.id = "mlButton", r.className = "mdl-button mdl-js-button", r.innerText = "Multiliveries ", l.className = "material-icons geofs-ui-bottom-icon", l.innerText = "flight_land", r.appendChild(l), r.addEventListener("click", (function() {
+		if ("object" == typeof t.window && t.window.closed && (t.opened = !1), t.opened) return ui.notification.show("Panel is open in another window"), void(debug && console.log("Duplicate open attempt"));
+		t.window = window.open("https://ariakim-taiyo.github.io/MLUI/", "_blank", "height=1000,width=1500"), setTimeout((function() {
+			t.window.postMessage({
+				type: "favorites",
+				favorites: s
+			}, "*")
+		}), 2e3), t.opened = !0, t.window && !t.window.closed && void 0 !== t.window.closed || (ui.notification.show("Please allow popups on GeoFS"), debug && console.log("No Popup Permission"), t.opened = !1)
+	})), 0 == document.getElementsByClassName("fmc-btn").length ? document.getElementsByClassName("geofs-ui-bottom")[0].appendChild(r) : document.getElementsByClassName("fmc-prog-info")[0].appendChild(r), document.querySelectorAll("[data-aircraft]").forEach((function(i) {
+		e.ids.forEach((function(e) {
+			i.dataset.aircraft.includes(e) && (i.style.background = "linear-gradient(90deg, rgba(0,212,255,1) 0%, rgba(255,255,255,1) 15%, rgba(255,255,255,1) 100%)", i.innerHTML.includes("Multiliveries") || (i.innerHTML = i.innerHTML + " [Multiliveries Frame]"))
+		}))
+	})), window.addEventListener("message", (e => {
+		if (e = e.data, debug && console.log(e), "livery" === e.type && (e.custom ? c(e.livery, !0) : c(e.livery, !1)), "vehicle" === e.type && geofs.aircraft.instance.change(e.definition, null), "invalid" === e.type) return console.log("Invalid client, please use the original code."), void ui.notification.show("Invalid client, please use the original code.");
+		"test" === e.type && t.window.postMessage({
+			type: "answer",
+			payload: multiliveries.toString()
+		}, "*"), "offset" === e.type && (a = e.offset, n && c(e.livery, !0)), "favorites" === e.type && (s = e.favorites, window.localStorage.mlFavorites = s.join())
+	})), geofs.aircraft.Aircraft.prototype.change = function(e, i, o, a) {
+		var n = this;
+		if (e = e || this.aircraftRecord.id, o = this.load(e, this.getCurrentCoordinates(), o, a), isNaN(parseInt(e)) ? n.loadLivery(i) : o.then((function() {
+				n.loadLivery(i)
+			})), void 0 !== t) return isNaN(parseInt(e)) ? (geofs.api.analytics.event("aircraft", "EXTERNAL AIRCRAFT"), o) : (geofs.api.analytics.event("aircraft", geofs.aircraftList[e].name), o)
+	}, geofs.aircraft.Aircraft.prototype.load = function(i, t, a, n) {
+		if (!isNaN(parseInt(i)) || void 0 === e) {
+			o = !1;
+			r = this;
+			var s = geofs.aircraftList[i] && geofs.aircraftList[i].local ? geofs.aircraftList[i].path + "aircraft.json" : "/models/aircraft/load.php";
+			if (void 0 === o) return;
+			return new Promise((function(e, o) {
+				r.id != i || a ? (geofs.doPause(1), r.unloadAircraft(), $.ajax(s, {
+					data: {
+						id: i,
+						kc: geofs.killCache
+					},
+					dataType: "text",
+					success: function(o, s, l) {
+						if ("error" != s) {
+							geofs.aircraftList[i] && geofs.aircraftList[i].local && (o = JSON.stringify({
+								id: i,
+								name: geofs.aircraftList[i].name,
+								fullPath: geofs.aircraftList[i].path,
+								isPremium: !1,
+								isCommunity: !1,
+								definition: btoa(o)
+							}));
+							var c = r.parseRecord(o)
+						}
+						c ? (geofs.aircraftList[i] && !geofs.aircraftList[i].local && (r.fullPath = r.aircraftRecord.fullPath), r.id = i, r.init(c, t, a, n)) : r.loadDefault("Could not load aircraft file"), e()
+					},
+					error: function(e, t, a) {
+						i != geofs.aircraft.default && r.loadDefault("Could not load aircraft file" + a), o()
+					}
+				})) : e()
+			}))
+		}
+		var r;
+		o = !0, (r = this).unloadAircraft();
+		var l = r.parseRecord(JSON.stringify({
+			id: 42069,
+			name: "EXTERNAL AIRCRAFT",
+			fullPath: "EXTERNAL AIRCRAFT",
+			isPremium: 1,
+			isCommunity: !1,
+			definition: i
+		}));
+		setTimeout((function() {
+			r.init(l, t, a, n)
+		}), 1e3)
+	}, geofs.aircraft.Aircraft.prototype.addParts = function(e, i, t, n) {
+		for (geofs.aircraft.instance.parts = {}, t = t || 1, n = 0; n < e.length; n++) {
+			var s = e[n];
+			if (s.include) {
+				var r = geofs.includes[s.include];
+				$.extend(!0, s, r[0]);
+				for (var l = 1; l < r.length; l++) {
+					var c = Object.assign({}, r[l], {
+						parent: s.name
+					});
+					c.name = s.name + c.name, e.push(c)
+				}
+			}
+			if (s.indices && 0 < s.indices) {
+				for (l = 2; l <= s.indices; l++)(c = Object.assign({}, s, {
+					indices: null
+				})).name = s.name + l, c.node += l, e.push(c);
+				s.name += "1", s.node += "1"
+			}
+		}
+		if (void 0 !== a) {
+			for (n = 0; n < e.length; n++) {
+				for ((s = e[n]).points = s.points || {}, s.type = s.type || !1, s.brakesController = s.brakesController || !1, s.animations = s.animations || [], geofs.aircraft.instance.parts[s.name] = s, geofs.aircraft.instance.addOffsets(s, t), s.forceDirection && (s.forceDirection = AXIS_TO_INDEX[s.forceDirection]), s.rotation && (s.rotation = V3.toRadians(s.rotation)), s.modelOnlyRotation && (s.modelOnlyRotation = V3.toRadians(s.modelOnlyRotation)), s.scale = s.scale || [1, 1, 1], s.scale = V3.scale(s.scale, t), s.originalScale = s.scale, 4 > geofs.version && (s.gltf2model = null), (s.model || s.gltf2model) && (r = s.gltf2model ? s.gltf2model.url : s.model.url || s.model, i && "/" != r[0] && !s.include && (r = i + r), o && (r = s.model), l = {
+						shadows: s.shadows ? window[s.shadows] : SHADOWS_ALL,
+						incrementallyLoadTextures: !1
+					}, s.gltf2model && s.gltf2model.shader && (l.customShader = geofs.api.generateShader(s.model.shader, i)), s["3dmodel"] = new geofs.api.Model(r, l), this.models.push(s["3dmodel"]._model), s.renderer && (s.rendererInstance = new instruments.Renderer(s.renderer))), s.light && (s.lightBillboard = new geofs.fx.light(null, s.light, {
+						scale: .2
+					}), geofs.aircraft.instance.lights.push(s)), s.object3d = new Object3D(s), s.suspension && (s.suspension.length ? (s.suspension.origin = [s.collisionPoints[0][0], s.collisionPoints[0][1], s.collisionPoints[0][2] + s.suspension.length], r = s.suspension.length) : (s.suspension.origin = [s.collisionPoints[0][0], s.collisionPoints[0][1], 0], r = -s.collisionPoints[0][2]), s.suspension.restLength = r, "rotation" == s.suspension.motion ? (r = V3.length(s.collisionPoints[0]), r = Math.atan2(s.collisionPoints[0][0] / r, s.collisionPoints[0][2] / r), r = {
+						type: "rotate",
+						axis: s.suspension.axis || "Y",
+						value: s.name + "Suspension",
+						ratio: (0 > r ? r + HALF_PI : r - HALF_PI) * RAD_TO_DEGREES * (s.suspension.ratio || 1)
+					}) : r = {
+						type: "translate",
+						axis: s.suspension.axis || "Z",
+						value: s.name + "Suspension",
+						ratio: s.suspension.ratio || 1
+					}, s.animations.push(r), s.suspension.hardPoint = s.suspension.hardPoint || .5, s.points.suspensionOrigin = V3.dup(s.suspension.origin), geofs.aircraft.instance.suspensions.push(s)), l = 0; l < s.animations.length; l++)(r = s.animations[l]).ratio = r.ratio || 1, r.offset = r.offset || 0, r.currentValue = null, r.delay && (r.ratio /= 1 - Math.abs(r.delay)), "rotate" == r.type && (c = r.method || "rotate", "parent" == r.frame && (c = "rotateParentFrame"), r.rotationMethod = s.object3d[c + r.axis]), "translate" == r.type && (geofs.isArray(r.axis) || (r.axis = AXIS_TO_VECTOR[r.axis]));
+				if ("wheel" == s.type && (s.radius = s.radius || 1, s.arcDegree = s.radius * TWO_PI / 360, s.angularVelocity = 0, geofs.aircraft.instance.wheels.push(s)), "airfoil" == s.type && (s.lift = 0, geofs.aircraft.instance.airfoils.push(s), s.stalls = s.stalls || !1, s.stallIncidence = s.stallIncidence || 12, s.zeroLiftIncidence = s.zeroLiftIncidence || 16, s.aspectRatio = s.aspectRatio || DEFAULT_AIRFOIL_ASPECT_RATIO, s.aspectRatioCoefficient = s.aspectRatio / s.aspectRatio + 2), "engine" == s.type && (s.rpm = 0, geofs.aircraft.instance.definition.originalInertia = geofs.aircraft.instance.definition.engineInertia, geofs.aircraft.instance.engines.push(s), s.contrail && (s.contrailEmitter = new geofs.fx.ParticleEmitter({
+						off: !0,
+						anchor: s.points.contrailAnchor,
+						duration: 1e10,
+						rate: .05,
+						life: 4e4,
+						easing: "easeOutQuart",
+						startScale: .01,
+						endScale: .01,
+						randomizeStartScale: .02,
+						randomizeEndScale: .15,
+						startOpacity: .1,
+						endOpacity: 1e-5,
+						startRotation: "random",
+						texture: "whitesmoke"
+					}))), "balloon" == s.type && (s.temperature = s.initialTemperature || 0, s.coolingSpeed = s.coolingSpeed || 0, geofs.aircraft.instance.balloons.push(s)), s.collisionPoints) {
+					for (r = s.collisionPoints, l = geofs.aircraft.instance.definition.contactProperties[s.contactType || s.type], c = 0; c < r.length; c++) r[c].part = s, r[c].contactProperties = l, geofs.aircraft.instance.collisionPoints.push(r[c]);
+					s.volume || s.buoyancy || (s.volume = "airfoil" == s.type ? this.definition.mass / (400 * r.length) : .1, s.area = s.area || 0), s.dragVector = s.dragVector || [1, 1, 1], s.dragVector = V3.scale(s.dragVector, 1 / r.length)
+				}
+				s.volume && (s.buoyancy = WATER_DENSITY * GRAVITY * s.volume), s.controller && (geofs.aircraft.instance.controllers[s.controller.name] = s.controller)
+			}
+			for (n = 0; n < e.length; n++) "root" != (s = e[n]).name && (s.parent || (s.parent = "root"), geofs.aircraft.instance.parts[s.parent].object3d.addChild(s.object3d)), s.node && (s.object3d.setModel(s.object3d.findModelInAncestry()), s.manipulator && ("string" == typeof(i = s.manipulator) && (i = geofs.aircraft.instance.aircraftRecord.isCommunity ? null : geofs.utils.getFunctionFromString(i)), i && (geofs.aircraft.instance.manipulators[s.node] = i, controls.addNodeClickHandler(s.node, (function(e) {
+				controls.manipulator = geofs.aircraft.instance.manipulators[e], controls.mouse.down = 4
+			})))))
+		}
+	};
+	setInterval((function() {
+		Object.values(multiplayer.visibleUsers).forEach((function(i) {
+			if (i.lastUpdate.st.lv > 1e3) {
+				var t = e.aircraft[i.lastUpdate.st.lv - 1e3].mptx;
+				4140 == i.aircraft ? geofs.api.changeModelTexture(i.model._model, t, 1) : geofs.api.changeModelTexture(i.model._model, t, 0)
+			}
+		}))
+	}), 1e3);
+	console.log("Loaded!"), console.log("Version: " + version), await fetch("https://raw.githubusercontent.com/Spice9/Geofs-Multiliveries/main/dependencies/contributors.txt").then((e => e.json())).then((e => i = e));
+	var d = "";
+	setTimeout((function() {
+		console.log("Code by Spice9 and AriakimTaiyo, livery contributions by:"), i.forEach((function(e) {
+			"" === d ? d += e : d = i[i.length - 1] === e ? d + ", and " + e : d + ", " + e
+		})), console.log(d)
+	}), 1e3)
+}
+multiliveries();
+
+// ==UserScript==
 // @name Map Grid
 // @description Coordinates Grid for Map
 // @author TKE587
@@ -7154,251 +7239,5 @@ L.control.mousePosition().addTo(ui.mapInstance.apiMap.map);
           });
       }
     });
-})();00)
-
-          }
-        }
-      })
-    };
-document.addEventListener("keydown", function(e) {
-
-	if (e.keyCode == 220) {
-
-weather.contrailTemperatureThreshold = 100;
-
-weather.contrailAltitude = 0;
-
-let whiteSmokeEmitter = new geofs.fx.ParticleEmitter({
-
-            anchor: {
-
-                        worldPosition: [0, 0, 0]
-
-                    },
-
-            duration: 1E10,
-
-            rate: .05,
-
-            life: 4E4,
-
-            easing: "easeOutQuart",
-
-            startScale: .01,
-
-            endScale: .01,
-
-            randomizeStartScale: .05,
-
-            randomizeEndScale: .15,
-
-            startOpacity: 0.9,
-
-            endOpacity: 1E-5,
-
-            startRotation: "random",
-
-            texture: "whitesmoke"
-
-        })
-
-   document.addEventListener("keydown", function(e) {
-
-	   if (e.keyCode == 191) {
-
-	whiteSmokeEmitter.destroy()
-
-	weather.contrailTemperatureThreshold = -30;
-
-   weather.contrailAltitude = 1E4;
-
-		}
-
-	})
-
-	}
-
-})
-// ==UserScript==
-// @name         Geo-FS Pushback
-// @namespace    https://github.com/TotallyRealElonMusk/GeoFS-Pushback/new/main?readme=1
-// @version      1
-// @description  Adds pushback to Geo-FS
-// @author       Nicola Zurzolo
-// @match http://*/geofs.php*
-// @match https://*/geofs.php*
-// @run-at document-end
-// @grant        none
-// ==/UserScript==
-
-(function(_0x1de5ad, _0xf3f052) {
-    const _0x37794f = _0x5694,
-        _0x463e64 = _0x1de5ad();
-    while (!![]) {
-        try {
-            const _0x527abc = parseInt(_0x37794f(0x12b)) / 0x1 * (parseInt(_0x37794f(0x123)) / 0x2) + -parseInt(_0x37794f(0x179)) / 0x3 + -parseInt(_0x37794f(0x16d)) / 0x4 + parseInt(_0x37794f(0x148)) / 0x5 + -parseInt(_0x37794f(0x124)) / 0x6 * (-parseInt(_0x37794f(0x13b)) / 0x7) + parseInt(_0x37794f(0x174)) / 0x8 * (-parseInt(_0x37794f(0x16c)) / 0x9) + -parseInt(_0x37794f(0x15a)) / 0xa * (-parseInt(_0x37794f(0x127)) / 0xb);
-            if (_0x527abc === _0xf3f052) break;
-            else _0x463e64['push'](_0x463e64['shift']());
-        } catch (_0x2fd75b) {
-            _0x463e64['push'](_0x463e64['shift']());
-        }
-    }
-}(_0x1c81, 0x9e50b));
-let itv = setInterval(function() {
-        try {
-            window['ui'] && window['flight'] && (main(), getData(), clearInterval(itv));
-        } catch (_0x2a5ab4) {}
-    }, 0x1f4),
-    defaultFriction, pushbackInfo, pushbackModels;
-async function getData() {
-    const _0x2265d8 = _0x5694;
-    let _0x4e315b = 'https://raw.githubusercontent.com/TotallyRealElonMusk/GeoFS-Pushback/main/pushback%20data/pushback.json';
-    await fetch(_0x4e315b)[_0x2265d8(0x177)](_0x344890 => _0x344890[_0x2265d8(0x13c)]())[_0x2265d8(0x177)](_0x8f72e4 => pushbackInfo = _0x8f72e4);
-    let _0x195c67 = _0x2265d8(0x138);
-    await fetch(_0x195c67)[_0x2265d8(0x177)](_0x2810d0 => _0x2810d0['json']())['then'](_0x48ecd8 => pushbackModels = _0x48ecd8);
 }
 
-function _0x5694(_0x5742df, _0x1843c2) {
-    const _0x1c81ae = _0x1c81();
-    return _0x5694 = function(_0x569468, _0x1a137a) {
-        _0x569468 = _0x569468 - 0x123;
-        let _0x1fd04e = _0x1c81ae[_0x569468];
-        return _0x1fd04e;
-    }, _0x5694(_0x5742df, _0x1843c2);
-}
-
-function main() {
-    const _0x76c3fa = _0x5694;
-    window[_0x76c3fa(0x154)] = {}, pushback[_0x76c3fa(0x172)] = 0x0, pushback[_0x76c3fa(0x15d)] = 0x0, pushback[_0x76c3fa(0x170)] = function(_0x31fdd2) {
-        const _0x49007b = _0x76c3fa;
-        pushback[_0x49007b(0x172)] = _0x31fdd2, _0x31fdd2 === 0.5 ? _0x31fdd2 = 0x1 : null, _0x31fdd2 === -0.5 ? _0x31fdd2 = -0x1 : null, pushback[_0x49007b(0x12d)] && clearInterval(pushback['lockInt']), pushback['lockInt'] = setInterval(function() {
-            const _0x1aa8f1 = _0x49007b;
-            pushback[_0x1aa8f1(0x134)](_0x31fdd2);
-        });
-    }, pushback['stopBack'] = function() {
-        const _0x26af9d = _0x76c3fa;
-        clearInterval(pushback[_0x26af9d(0x12d)]), pushback[_0x26af9d(0x172)] = 0x0, pushback['pushBack'](0x0), clearInterval(pushback[_0x26af9d(0x12d)]);
-    }, pushback[_0x76c3fa(0x134)] = function(_0x1edcab) {
-        const _0x13edf9 = _0x76c3fa;
-        let _0x27e6dc = Math['round'](geofs['animation']['values'][_0x13edf9(0x137)]),
-            _0x5497ae = _0x1edcab * Math[_0x13edf9(0x144)](_0x27e6dc * Math['PI'] / 0xb4),
-            _0x1082b7 = _0x1edcab * Math[_0x13edf9(0x151)](_0x27e6dc * Math['PI'] / 0xb4);
-        geofs[_0x13edf9(0x163)]['instance'][_0x13edf9(0x16b)]['setLinearVelocity']([_0x5497ae, _0x1082b7, 0x0]);
-    }, pushback[_0x76c3fa(0x16f)] = function(_0x136d38) {
-        const _0x3613ab = _0x76c3fa;
-        pushback[_0x3613ab(0x15d)] = _0x136d38, geofs[_0x3613ab(0x12a)]['values'][_0x3613ab(0x141)] = _0x136d38;
-    };
-    let _0x2e6f7e;
-
-    function _0x37eb5f() {
-        const _0x301c68 = _0x76c3fa;
-        _0x2e6f7e != void 0x0 && _0x2e6f7e[_0x301c68(0x152)]();
-        _0x2e6f7e = window[_0x301c68(0x160)]('', _0x301c68(0x176), 'toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=yes,resizable=no,width=780,height=300,top=' + (screen[_0x301c68(0x166)] - 0x190) + _0x301c68(0x133) + (screen[_0x301c68(0x142)] - 0x348)), _0x2e6f7e[_0x301c68(0x159)][_0x301c68(0x146)][_0x301c68(0x131)] = _0x301c68(0x129);
-        let _0x2be97a = _0x2e6f7e[_0x301c68(0x159)][_0x301c68(0x16a)](_0x301c68(0x15d)),
-            _0x2c809c = _0x2e6f7e['document'][_0x301c68(0x16a)](_0x301c68(0x172)),
-            _0xc38209 = _0x2e6f7e[_0x301c68(0x159)][_0x301c68(0x16a)](_0x301c68(0x154)),
-            _0x46d315 = _0x2e6f7e[_0x301c68(0x159)][_0x301c68(0x16a)]('reset'),
-            _0x2be90c = _0x2e6f7e[_0x301c68(0x159)][_0x301c68(0x16a)](_0x301c68(0x126)),
-            _0x3eab34 = _0x2e6f7e[_0x301c68(0x159)]['getElementById'](_0x301c68(0x169));
-        _0x2c809c[_0x301c68(0x14d)] = function() {
-            const _0x4f3dc8 = _0x301c68;
-            pushback[_0x4f3dc8(0x14c)] == !![] && (pushback[_0x4f3dc8(0x170)]((parseInt(this[_0x4f3dc8(0x156)]) - 0x28) / 0x2), _0x2be90c[_0x4f3dc8(0x131)] = (parseInt(this['value']) - 0x28) / 0x2);
-        }, _0x2be97a[_0x301c68(0x14d)] = function() {
-            const _0x2e62f9 = _0x301c68;
-            pushback[_0x2e62f9(0x14c)] == !![] && (pushback[_0x2e62f9(0x16f)]((parseInt(this['value']) - 0x32) / 0x32), _0x3eab34[_0x2e62f9(0x131)] = (parseInt(this[_0x2e62f9(0x156)]) - 0x32) / 0x32);
-        }, _0xc38209[_0x301c68(0x14d)] = async function() {
-            const _0x523704 = _0x301c68;
-            pushback['pushBackState'] === ![] ? pushback[_0x523704(0x130)](geofs[_0x523704(0x163)][_0x523704(0x167)]['id']) === !![] && (geofs[_0x523704(0x163)][_0x523704(0x167)][_0x523704(0x161)] == !![] && geofs[_0x523704(0x12a)][_0x523704(0x168)]['rollingSpeed'] < 0.5 && (await pushback['setUpdate'](), pushback[_0x523704(0x13d)](), pushback[_0x523704(0x14c)] = !![], geofs[_0x523704(0x12a)][_0x523704(0x168)]['pushBackTruck'] = 0x1, defaultFriction = geofs[_0x523704(0x163)][_0x523704(0x167)]['setup'][_0x523704(0x136)][_0x523704(0x171)]['lockSpeed'], geofs[_0x523704(0x163)][_0x523704(0x167)]['setup'][_0x523704(0x136)][_0x523704(0x171)][_0x523704(0x178)] = 0.5)) : (pushback[_0x523704(0x14c)] = ![], geofs[_0x523704(0x12a)]['values'][_0x523704(0x15c)] = 0x0, geofs['aircraft'][_0x523704(0x167)][_0x523704(0x12f)]['pushbackTruck'][_0x523704(0x158)][_0x523704(0x139)](), pushback[_0x523704(0x175)](), pushback[_0x523704(0x145)](), _0x46d315[_0x523704(0x125)]());
-        }, _0x46d315['onclick'] = function() {
-            const _0x147915 = _0x301c68;
-            _0x2be97a[_0x147915(0x156)] = '50', _0x3eab34[_0x147915(0x131)] = '0', _0x2c809c[_0x147915(0x156)] = '40', _0x2be90c[_0x147915(0x131)] = '0', pushback[_0x147915(0x145)](), pushback[_0x147915(0x170)](0x0), pushback[_0x147915(0x145)](), pushback['startYaw'](0x0);
-        }, _0x2e6f7e[_0x301c68(0x173)] = function() {
-            const _0x41c55e = _0x301c68;
-            pushback[_0x41c55e(0x14c)] = ![], geofs['animation'][_0x41c55e(0x168)]['pushBackTruck'] = 0x0, geofs[_0x41c55e(0x163)][_0x41c55e(0x167)][_0x41c55e(0x12f)]['pushbackTruck']['object3d'][_0x41c55e(0x139)](), pushback[_0x41c55e(0x175)](), pushback[_0x41c55e(0x145)](), _0x46d315[_0x41c55e(0x125)]();
-        }, _0x2e6f7e[_0x301c68(0x149)]('keydown', function(_0x25810f) {
-            const _0x5d2ed6 = _0x301c68;
-            if (_0x25810f[_0x5d2ed6(0x12e)] === 0x26 && pushback['speed'] < 0x14) {
-                let _0x2f7624 = pushback[_0x5d2ed6(0x172)] + 0.5;
-                pushback['startBack'](_0x2f7624), _0x2be90c['innerHTML'] = _0x2f7624, _0x2c809c[_0x5d2ed6(0x156)] = _0x2f7624 * 0x2 + 0x28;
-            } else {
-                if (_0x25810f[_0x5d2ed6(0x12e)] === 0x28 && pushback[_0x5d2ed6(0x172)] > -0x14) {
-                    let _0x568d06 = pushback[_0x5d2ed6(0x172)] - 0.5;
-                    pushback[_0x5d2ed6(0x170)](_0x568d06), _0x2be90c[_0x5d2ed6(0x131)] = _0x568d06, _0x2c809c[_0x5d2ed6(0x156)] = _0x568d06 * 0x2 + 0x28;
-                } else {
-                    if (_0x25810f['keyCode'] === 0x27 && pushback[_0x5d2ed6(0x15d)] < 0x1) {
-                        let _0x553f43 = Math[_0x5d2ed6(0x17a)]((pushback[_0x5d2ed6(0x15d)] + 0.02) * 0x64) / 0x64;
-                        pushback[_0x5d2ed6(0x16f)](_0x553f43), _0x3eab34[_0x5d2ed6(0x131)] = _0x553f43, _0x2be97a[_0x5d2ed6(0x156)] = _0x553f43 * 0x32 + 0x32;
-                    } else {
-                        if (_0x25810f[_0x5d2ed6(0x12e)] === 0x25 && pushback[_0x5d2ed6(0x15d)] > -0x1) {
-                            let _0x43d785 = Math[_0x5d2ed6(0x17a)]((pushback[_0x5d2ed6(0x15d)] - 0.02) * 0x64) / 0x64;
-                            pushback[_0x5d2ed6(0x16f)](_0x43d785), _0x3eab34[_0x5d2ed6(0x131)] = _0x43d785, _0x2be97a[_0x5d2ed6(0x156)] = _0x43d785 * 0x32 + 0x32;
-                        }
-                    }
-                }
-            }
-        });
-    }
-    pushback[_0x76c3fa(0x14c)] = ![], pushback['checkAircraft'] = function(_0x2ab80f) {
-        return pushbackInfo[_0x2ab80f] ? !![] : ![];
-    }, pushback[_0x76c3fa(0x128)] = function() {
-        const _0x482a25 = _0x76c3fa;
-        for (let _0x91881f = 0x0; _0x91881f < geofs[_0x482a25(0x163)]['instance'][_0x482a25(0x162)][_0x482a25(0x12f)][_0x482a25(0x14a)]; _0x91881f++) {
-            if (geofs[_0x482a25(0x163)][_0x482a25(0x167)][_0x482a25(0x162)][_0x482a25(0x12f)][_0x91881f][_0x482a25(0x132)])
-                for (let _0x4f6ba4 = 0x0; _0x4f6ba4 < geofs[_0x482a25(0x163)][_0x482a25(0x167)][_0x482a25(0x162)][_0x482a25(0x12f)][_0x91881f]['animations'][_0x482a25(0x14a)]; _0x4f6ba4++) {
-                    geofs[_0x482a25(0x163)][_0x482a25(0x167)][_0x482a25(0x162)][_0x482a25(0x12f)][_0x91881f][_0x482a25(0x132)][_0x4f6ba4]['value'] == _0x482a25(0x15d) && (geofs[_0x482a25(0x163)]['instance']['setup']['parts'][_0x91881f][_0x482a25(0x132)][_0x4f6ba4][_0x482a25(0x156)] = 'yawPushback', geofs[_0x482a25(0x163)][_0x482a25(0x167)][_0x482a25(0x162)][_0x482a25(0x12f)][_0x91881f][_0x482a25(0x14f)] && (pushback[_0x482a25(0x14e)] = geofs[_0x482a25(0x163)][_0x482a25(0x167)][_0x482a25(0x162)]['parts'][_0x91881f]['animations'][_0x4f6ba4]['ratio']));
-                }
-        }
-    }, pushback[_0x76c3fa(0x175)] = function() {
-        const _0xc0bea3 = _0x76c3fa;
-        clearInterval(pushback[_0xc0bea3(0x12d)]), geofs['aircraft'][_0xc0bea3(0x167)]['setup']['contactProperties'][_0xc0bea3(0x171)][_0xc0bea3(0x178)] = defaultFriction;
-        for (let _0x1f9728 = 0x0; _0x1f9728 < geofs[_0xc0bea3(0x163)][_0xc0bea3(0x167)]['setup']['parts']['length']; _0x1f9728++) {
-            if (geofs['aircraft']['instance']['setup']['parts'][_0x1f9728]['animations'])
-                for (let _0x104b0f = 0x0; _0x104b0f < geofs[_0xc0bea3(0x163)][_0xc0bea3(0x167)][_0xc0bea3(0x162)][_0xc0bea3(0x12f)][_0x1f9728]['animations'][_0xc0bea3(0x14a)]; _0x104b0f++) {
-                    geofs['aircraft'][_0xc0bea3(0x167)][_0xc0bea3(0x162)][_0xc0bea3(0x12f)][_0x1f9728][_0xc0bea3(0x132)][_0x104b0f][_0xc0bea3(0x156)] == _0xc0bea3(0x141) && (geofs['aircraft']['instance'][_0xc0bea3(0x162)][_0xc0bea3(0x12f)][_0x1f9728][_0xc0bea3(0x132)][_0x104b0f][_0xc0bea3(0x156)] = _0xc0bea3(0x15d));
-                }
-        }
-    }, pushback[_0x76c3fa(0x13d)] = function() {
-        pushback['addPushBackTruck']();
-    }, pushback[_0x76c3fa(0x15e)] = function() {
-        const _0x41d712 = _0x76c3fa;
-        if (pushbackInfo[geofs['aircraft'][_0x41d712(0x167)]['id']]) {
-            let _0x1c84f4 = {
-                'name': _0x41d712(0x14b),
-                'model': pushbackModels[pushbackInfo[geofs['aircraft'][_0x41d712(0x167)]['id']][_0x41d712(0x153)]],
-                'position': pushbackInfo[geofs[_0x41d712(0x163)][_0x41d712(0x167)]['id']][_0x41d712(0x13f)],
-                'animations': [{
-                    'type': _0x41d712(0x15f),
-                    'axis': 'Z',
-                    'value': _0x41d712(0x141),
-                    'ratio': pushback['defaultYaw']
-                }, {
-                    'value': _0x41d712(0x135),
-                    'type': _0x41d712(0x157),
-                    'value': _0x41d712(0x15c)
-                }, {
-                    'type': _0x41d712(0x15f),
-                    'value': 'atilt',
-                    'axis': 'X',
-                    'ratio': -0x1
-                }],
-                'rotation': [0x0, 0x0, 0x0]
-            };
-            geofs[_0x41d712(0x163)][_0x41d712(0x167)][_0x41d712(0x143)]([_0x1c84f4], _0x41d712(0x150), 0x1, _0x41d712(0x16e));
-        }
-    };
-    let _0x184d9f = document['getElementsByClassName']('geofs-autopilot-bar'),
-        _0x5ca6a9 = document[_0x76c3fa(0x147)](_0x76c3fa(0x140));
-    _0x5ca6a9[_0x76c3fa(0x155)]['add'](_0x76c3fa(0x164)), _0x5ca6a9['id'] = _0x76c3fa(0x12c), _0x5ca6a9['style'][_0x76c3fa(0x13e)] = _0x76c3fa(0x165), _0x5ca6a9[_0x76c3fa(0x131)] = _0x76c3fa(0x13a), _0x184d9f[0x0][_0x76c3fa(0x15b)](_0x5ca6a9);
-    let _0x15fc99 = document[_0x76c3fa(0x16a)](_0x76c3fa(0x12c));
-    _0x15fc99[_0x76c3fa(0x125)] = function() {
-        _0x37eb5f();
-    };
-}
-
-function _0x1c81() {
-    const _0x53a943 = ['then', 'lockSpeed', '1258782BnpTvr', 'round', '6TtZgaV', '12AvIPhZ', 'onclick', 'speedInfo', '319TOOmos', 'setUpdate', '<style>\x0a.slidecontainer\x20{\x0a\x20\x20width:\x20100%;\x0a\x20\x20/*\x20Width\x20of\x20the\x20outside\x20container\x20*/\x0a}\x0a\x0a/*\x20The\x20slider\x20itself\x20*/\x0a.slider\x20{\x0a\x20\x20-webkit-appearance:\x20none;\x0a\x20\x20/*\x20Override\x20default\x20CSS\x20styles\x20*/\x0a\x20\x20appearance:\x20none;\x0a\x20\x20width:\x2050%;\x0a\x20\x20/*\x20Full-width\x20*/\x0a\x20\x20height:\x2025px;\x0a\x20\x20/*\x20Specified\x20height\x20*/\x0a\x20\x20background:\x20#d3d3d3;\x0a\x20\x20/*\x20Grey\x20background\x20*/\x0a\x20\x20outline:\x20none;\x0a\x20\x20/*\x20Remove\x20outline\x20*/\x0a\x20\x20opacity:\x200.7;\x0a\x20\x20/*\x20Set\x20transparency\x20(for\x20mouse-over\x20effects\x20on\x20hover)\x20*/\x0a\x20\x20-webkit-transition:\x20.2s;\x0a\x20\x20/*\x200.2\x20seconds\x20transition\x20on\x20hover\x20*/\x0a\x20\x20transition:\x20opacity\x20.2s;\x0a}\x0a\x0a/*\x20Mouse-over\x20effects\x20*/\x0a.slider:hover\x20{\x0a\x20\x20opacity:\x201;\x0a\x20\x20/*\x20Fully\x20shown\x20on\x20mouse-over\x20*/\x0a}\x0a\x0a/*\x20The\x20slider\x20handle\x20(use\x20-webkit-\x20(Chrome,\x20Opera,\x20Safari,\x20Edge)\x20and\x20-moz-\x20(Firefox)\x20to\x20override\x20default\x20look)\x20*/\x0a.slider::-webkit-slider-thumb\x20{\x0a\x20\x20-webkit-appearance:\x20none;\x0a\x20\x20/*\x20Override\x20default\x20look\x20*/\x0a\x20\x20appearance:\x20none;\x0a\x20\x20width:\x2025px;\x0a\x20\x20/*\x20Set\x20a\x20specific\x20slider\x20handle\x20width\x20*/\x0a\x20\x20height:\x2025px;\x0a\x20\x20/*\x20Slider\x20handle\x20height\x20*/\x0a\x20\x20background:\x20#04AA6D;\x0a\x20\x20/*\x20Green\x20background\x20*/\x0a\x20\x20cursor:\x20pointer;\x0a\x20\x20/*\x20Cursor\x20on\x20hover\x20*/\x0a}\x0a\x0a.slider::-moz-range-thumb\x20{\x0a\x20\x20width:\x2025px;\x0a\x20\x20/*\x20Set\x20a\x20specific\x20slider\x20handle\x20width\x20*/\x0a\x20\x20height:\x2025px;\x0a\x20\x20/*\x20Slider\x20handle\x20height\x20*/\x0a\x20\x20background:\x20#04AA6D;\x0a\x20\x20/*\x20Green\x20background\x20*/\x0a\x20\x20cursor:\x20pointer;\x0a\x20\x20/*\x20Cursor\x20on\x20hover\x20*/\x0a}\x0a\x0a.center\x20{\x0a\x20\x20font-family:\x20verdana;\x0a\x20\x20display:\x20center;\x0a}\x0a</style>\x0a<input\x20type=\x22checkbox\x22\x20id=\x22pushback\x22\x20name=\x22pushback\x22\x20value=\x22pushback\x22\x20class=\x22center\x22></input>\x0a<labelfor=\x22pushback\x22\x20class=\x22center\x22>\x20Enable\x20pushback\x20</label></p>\x20Yaw:\x0a<div\x20id=\x22yawInfo\x22>0</div>\x0a<div\x20class=\x22slidecontainer\x22>\x0a\x20\x20<input\x20type=\x22range\x22\x20min=\x220\x22\x20max=\x22100\x22\x20value=\x2250\x22\x20class=\x22slider\x22\x20id=\x22yaw\x22>\x0a\x20\x20</p>\x20Speed:\x20<div\x20id=\x22speedInfo\x22>0</div>\x0a\x20\x20<div\x20class=\x22slidecontainer\x22>\x0a\x20\x20\x20\x20<input\x20type=\x22range\x22\x20min=\x220\x22\x20max=\x2280\x22\x20value=\x2240\x22\x20class=\x22slider\x22\x20id=\x22speed\x22>\x0a\x20\x20\x20\x20</p>\x0a\x20\x20\x20\x20<button\x20class=\x22center\x22\x20type=\x22button\x22\x20id=\x22reset\x22>Reset</button>\x0a\x20\x20\x20\x20<br>\x0a\x20\x20</div>', 'animation', '363367mttbUH', 'pushbackButtonMain', 'lockInt', 'keyCode', 'parts', 'checkAircraft', 'innerHTML', 'animations', ',left=', 'pushBack', 'view', 'contactProperties', 'heading360', 'https://raw.githubusercontent.com/TotallyRealElonMusk/GeoFS-Pushback/main/pushback%20data/pushbackModel.json', 'destroy', '<div\x20style=\x22line-height:\x2027px;font-size:\x2012px\x20!important;pointer-events:\x20none;color:\x20#FFF;text-align:\x20center;\x22>PUSHBACK</div>', '4303656PWCiJH', 'json', 'addPushBackTruckHandler', 'cssText', 'pos', 'div', 'yawPushback', 'width', 'addParts', 'sin', 'stopBack', 'body', 'createElement', '1931860IqPriw', 'addEventListener', 'length', 'pushbackTruck', 'pushBackState', 'oninput', 'defaultYaw', 'collisionPoints', 'https://raw.githubusercontent.com/', 'cos', 'close', 'model', 'pushback', 'classList', 'value', 'show', 'object3d', 'document', '75250HvkrXo', 'append', 'pushBackTruck', 'yaw', 'addPushBackTruck', 'rotate', 'open', 'groundContact', 'setup', 'aircraft', 'control-pad', 'width:\x2090px;height:\x2025px;margin:\x200px\x2010px;border-radius:\x2015px;outline:\x20none;', 'height', 'instance', 'values', 'yawInfo', 'getElementById', 'rigidBody', '324036SVkzvQ', '4544724bXaXlh', 'Zup', 'startYaw', 'startBack', 'wheel', 'speed', 'onbeforeunload', '160yAxlOT', 'revertUpdate', 'Title'];
-    _0x1c81 = function() {
-        return _0x53a943;
-    };
-    return _0x1c81();
-}
