@@ -1,184 +1,3 @@
-//consistency
- document.addEventListener("keydown", function(e) {
-
-	if (e.keyCode == 220) {
-
-weather.contrailTemperatureThreshold = 100;
-
-weather.contrailAltitude = 0;
-
-let whiteSmokeEmitter = new geofs.fx.ParticleEmitter({
-
-            anchor: {
-
-                        worldPosition: [0, 0, 0]
-
-                    },
-
-            duration: 1E10,
-
-            rate: .05,
-
-            life: 4E4,
-
-            easing: "easeOutQuart",
-
-            startScale: .01,
-
-            endScale: .01,
-
-            randomizeStartScale: .05,
-
-            randomizeEndScale: .15,
-
-            startOpacity: 0.9,
-
-            endOpacity: 1E-5,
-
-            startRotation: "random",
-
-            texture: "whitesmoke"
-
-        })
-
-   document.addEventListener("keydown", function(e) {
-
-	   if (e.keyCode == 191) {
-
-	whiteSmokeEmitter.destroy()
-
-	weather.contrailTemperatureThreshold = -30;
-
-   weather.contrailAltitude = 1E4;
-
-		}
-
-	})
-
-	}
-
-})
-
-ui.notification.show("Apply full throttle, then press Q to activate catapult.")
-
-setTimeout(() => {ui.notification.show("You must be in a carrier-capable aircraft and on the ground to use catapult.")}, 6900);
-
-if (geofs.aircraft.instance.id == 7){
-
-   document.addEventListener("keydown", function(e) {
-
-	   if (e.keyCode == 81) {
-
-	   if (geofs.animation.values.groundContact == 1){
-
-	   geofs.aircraft.instance.parts.engine.afterBurnerThrust = (geofs.aircraft.instance.parts.engine.afterBurnerThrust * 4)
-
-		let whiteSmokeEmitter = new geofs.fx.ParticleEmitter({
-
-            anchor: {
-
-                        worldPosition: [0, 0, -1]
-
-                    },
-
-            duration: 1E5,
-
-            rate: .05,
-
-            life: 4E4,
-
-            easing: "easeOutQuart",
-
-            startScale: .0005,
-
-            endScale: .0005,
-
-            randomizeStartScale: .05,
-
-            randomizeEndScale: .15,
-
-            startOpacity: 0.9,
-
-            endOpacity: 1E-5,
-
-            startRotation: "random",
-
-            texture: "whitesmoke"
-
-        })
-
-	   setTimeout(() => {geofs.aircraft.instance.parts.engine.afterBurnerThrust = (geofs.aircraft.instance.parts.engine.afterBurnerThrust / 4)}, 2000);
-
-		setTimeout(() => {whiteSmokeEmitter.destroy()}, 2250);
-
-	   }
-
-	   }
-
-   })
-
-}
-
-document.addEventListener("keydown", function(e) {
-
-	if (e.keyCode == 220) {
-
-weather.contrailTemperatureThreshold = 100;
-
-weather.contrailAltitude = 0;
-
-let whiteSmokeEmitter = new geofs.fx.ParticleEmitter({
-
-            anchor: {
-
-                        worldPosition: [0, 0, 0]
-
-                    },
-
-            duration: 1E10,
-
-            rate: .05,
-
-            life: 4E4,
-
-            easing: "easeOutQuart",
-
-            startScale: .01,
-
-            endScale: .01,
-
-            randomizeStartScale: .05,
-
-            randomizeEndScale: .15,
-
-            startOpacity: 0.9,
-
-            endOpacity: 1E-5,
-
-            startRotation: "random",
-
-            texture: "whitesmoke"
-
-        })
-
-   document.addEventListener("keydown", function(e) {
-
-	   if (e.keyCode == 191) {
-
-	whiteSmokeEmitter.destroy()
-
-	weather.contrailTemperatureThreshold = -30;
-
-   weather.contrailAltitude = 1E4;
-
-		}
-
-	})
-
-	}
-
-})
-
 //Consistency
 function realismGo() {
    console.log("Realism Pack running")
@@ -2438,7 +2257,6 @@ setTimeout(() => {
 }
 }
 f14aInterval = setInterval(function(){runF14A()},10)
-
 ui.notification.show("A321Neo addon by AriakimTaiyo and NVB9ALT. ILS IS included.")
 //Note from NVB9: I modified some parts, expanded it a little, and added a bunch of labels in the code.
 
@@ -3660,7 +3478,6 @@ document.body.appendChild(buttonDiv);
 document.getElementsByClassName("geofs-ui-bottom")[0].appendChild(buttonDiv);
 let element = document.getElementById("landButton");
 document.getElementsByClassName("geofs-ui-bottom")[0].insertBefore(element, buttonDiv);
-
 let k = 125;
 let dc = -1.5;
 let m = 0.6;
@@ -4826,7 +4643,6 @@ function yawDamper() {
 
 geofs.aircraft.instance.parts.rudder.animations[0].value = "rudderDamp";
 setInterval(function(){yawDamper();},10)
-
 //complicated maths to resolve torque axes
   //𝐹𝑠=|𝐹⃗ |cos(𝜃𝑠,𝐹)
 function splitAxes(force) {
@@ -5344,7 +5160,6 @@ setInterval(function(){
   tiller()
   stallForces()
 }, 20)
-
 geofs = geofs || {};
 
 geofs["atmosphereCommon.glsl"] = "" + "precision highp float;\n\nuniform float planetRadius;\n#ifdef VOLUMETRIC_CLOUDS\nconst float windSpeedRatio = 0.0002;\nuniform float cloudCover;\nuniform float cloudBase;\nuniform float cloudTop;\nuniform vec3 windVector;\n#ifdef REALTIME_CLOUDS\nuniform sampler2D coverageTexture;\n#endif\n#endif\n\n/*\n* Configuration\n*/\n#ifdef QUALITY_7\n\n#define PRIMARY_STEPS 16\n#define LIGHT_STEPS 4\n\n// This is only accessible from advanced settings\n#define CLOUDS_MAX_LOD 3\n#define MAXIMUM_CLOUDS_STEPS 100\n#define DISTANCE_QUALITY_RATIO 0.00003\n#define LIT_CLOUD\n#define CLOUD_SHADOWS\n\n#elif defined QUALITY_6\n\n#define PRIMARY_STEPS 16\n#define LIGHT_STEPS 4\n\n#define CLOUDS_MAX_LOD 3\n#define MAXIMUM_CLOUDS_STEPS 100\n#define DISTANCE_QUALITY_RATIO 0.00004\n#define LIT_CLOUD\n#define CLOUD_SHADOWS\n\n#elif defined QUALITY_5\n\n//#define PRIMARY_STEPS 12\n//#define LIGHT_STEPS 4\n#define PRIMARY_STEPS 9\n#define LIGHT_STEPS 3\n\n#define CLOUDS_MAX_LOD 3\n#define MAXIMUM_CLOUDS_STEPS 70\n#define DISTANCE_QUALITY_RATIO 0.00005\n#define LIT_CLOUD\n#define CLOUD_SHADOWS\n\n#elif defined QUALITY_4\n\n#define PRIMARY_STEPS 9\n#define LIGHT_STEPS 3\n\n#define CLOUDS_MAX_LOD 3\n#define MAXIMUM_CLOUDS_STEPS 50\n#define DISTANCE_QUALITY_RATIO 0.00007\n#define LIT_CLOUD\n#define CLOUD_SHADOWS\n\n#elif defined QUALITY_3\n\n#define PRIMARY_STEPS 6\n#define LIGHT_STEPS 2\n\n#define CLOUDS_MAX_LOD 2\n#define MAXIMUM_CLOUDS_STEPS 40\n#define DISTANCE_QUALITY_RATIO 0.0001\n#define CLOUD_SHADOWS\n\n#elif defined QUALITY_2\n\n#define PRIMARY_STEPS 4\n#define LIGHT_STEPS 1\n\n#define CLOUDS_MAX_LOD 2\n#define MAXIMUM_CLOUDS_STEPS 30\n#define DISTANCE_QUALITY_RATIO 0.0002\n#define CLOUD_SHADOWS\n\n#elif defined QUALITY_1\n\n#define PRIMARY_STEPS 3\n#define LIGHT_STEPS 1\n\n#define CLOUDS_MAX_LOD 2\n#define MAXIMUM_CLOUDS_STEPS 20\n#define DISTANCE_QUALITY_RATIO 0.0004\n\n#elif defined QUALITY_0\n\n#define PRIMARY_STEPS 0\n#define LIGHT_STEPS 0\n\n#define CLOUDS_MAX_LOD 0\n#define MAXIMUM_CLOUDS_STEPS 0\n#define DISTANCE_QUALITY_RATIO 0\n\n#else //DEFAULT\n\n#define PRIMARY_STEPS 9\n#define LIGHT_STEPS 2\n\n#define CLOUDS_MAX_LOD 2\n#define MAXIMUM_CLOUDS_STEPS 40\n#define DISTANCE_QUALITY_RATIO 0.0002\n#define CLOUD_SHADOWS\n\n#endif\n\n#define CLOUDS_DENS_MARCH_STEP 100.0\n#define CLOUDS_MAX_VIEWING_DISTANCE 250000.0\n\n/*\n* Utilities\n*/\n\n\n\n\n\nvec2 raySphereIntersect(vec3 r0, vec3 rd, float sr) {\nfloat a = dot(rd, rd);\nfloat b = 2.0 * dot(rd, r0);\nfloat c = dot(r0, r0) - (sr * sr);\nfloat d = (b * b) - 4.0 * a * c;\n\n// stop early if there is no intersect\nif (d < 0.0) return vec2(-1.0, -1.0);\n\n// calculate the ray length\nfloat squaredD = sqrt(d);\nreturn vec2(\n(-b - squaredD) / (2.0 * a),\n(-b + squaredD) / (2.0 * a)\n);\n}\n\n/*\n* Atmosphere scattering\n*/\n// Atmosphere by Dimas Leenman, Shared under the MIT license\n//https://github.com/Dimev/Realistic-Atmosphere-Godot-and-UE4/blob/master/godot/shader/atmosphere.shader\nvec3 light_intensity = vec3(100.0);//vec3(100.0); // how bright the light is, affects the brightness of the atmosphere\n//float planetRadius = 6361e3; // the radius of the planet\n//float atmo_radius = 6471e3; // the radius of the atmosphere\nfloat atmo_radius = planetRadius + 111e3;\nfloat realPlanetRadius = planetRadius + 10000.0;\nfloat atmo_radius_squared = atmo_radius * atmo_radius; // the radius of the atmosphere\nvec3 beta_ray = vec3(5.5e-6, 13.0e-6, 22.4e-6);//vec3(5.5e-6, 13.0e-6, 22.4e-6); // the amount rayleigh scattering scatters the colors (for earth: causes the blue atmosphere)\nvec3 beta_mie = vec3(21e-6); // vec3(21e-6);// the amount mie scattering scatters colors\nvec3 beta_ambient = vec3(0.0); // the amount of scattering that always occurs, can help make the back side of the atmosphere a bit brighter\nfloat g = 0.9; // the direction mie scatters the light in (like a cone). closer to -1 means more towards a single direction\nfloat height_ray = 10e3; // how high do you have to go before there is no rayleigh scattering?\nfloat height_mie = 3.2e3; // the same, but for mie\nfloat density_multiplier = 1.0; // how much extra the atmosphere blocks light\n\n#ifdef ADVANCED_ATMOSPHERE\nvec4 calculate_scattering(\nvec3 start, \t\t\t// the start of the ray (the camera position)\nvec3 dir, \t\t\t\t// the direction of the ray (the camera vector)\nfloat maxDistance, \t\t// the maximum distance the ray can travel (because something is in the way, like an object)\nvec3 light_dir\n) {\n\n// calculate the start and end position of the ray, as a distance along the ray\n// we do this with a ray sphere intersect\nfloat a = dot(dir, dir);\nfloat b = 2.0 * dot(dir, start);\nfloat c = dot(start, start) - atmo_radius_squared;\nfloat d = (b * b) - 4.0 * a * c;\n\n// stop early if there is no intersect\nif (d < 0.0) return vec4(0.0);\n\n// calculate the ray length\nfloat squaredD = sqrt(d);\nvec2 ray_length = vec2(\nmax((-b - squaredD) / (2.0 * a), 0.0),\nmin((-b + squaredD) / (2.0 * a), maxDistance)\n);\n\n// if the ray did not hit the atmosphere, return a black color\nif (ray_length.x > ray_length.y) return vec4(0.0);\n\n// prevent the mie glow from appearing if there's an object in front of the camera\nbool allow_mie = maxDistance > ray_length.y;\n// make sure the ray is no longer than allowed\n//ray_length.y = min(ray_length.y, maxDistance);\n//ray_length.x = max(ray_length.x, 0.0);\n\n// get the step size of the ray\nfloat step_size_i = (ray_length.y - ray_length.x) / float(PRIMARY_STEPS);\n\n// next, set how far we are along the ray, so we can calculate the position of the sample\n// if the camera is outside the atmosphere, the ray should start at the edge of the atmosphere\n// if it's inside, it should start at the position of the camera\n// the min statement makes sure of that\nfloat ray_pos_i = ray_length.x;\n\n// these are the values we use to gather all the scattered light\nvec3 total_ray = vec3(0.0); // for rayleigh\nvec3 total_mie = vec3(0.0); // for mie\n\n// initialize the optical depth. This is used to calculate how much air was in the ray\nvec2 opt_i = vec2(0.0);\n\n// also init the scale height, avoids some vec2's later on\nvec2 scale_height = vec2(height_ray, height_mie);\n\n// Calculate the Rayleigh and Mie phases.\n// This is the color that will be scattered for this ray\n// mu, mumu and gg are used quite a lot in the calculation, so to speed it up, precalculate them\nfloat mu = dot(dir, light_dir);\nfloat mumu = mu * mu;\nfloat gg = g * g;\nfloat phase_ray = 3.0 / (50.2654824574 ) * (1.0 + mumu);\n//float phase_mie = allow_mie ? 3.0 / (25.1327412287 ) * ((1.0 - gg) * (mumu + 1.0)) / (pow(1.0 + gg - 2.0 * mu * g, 1.5) * (2.0 + gg)) : 0.0;\n// allow some mie glow in front of horizon\n// this can be wierd looking through some mountains\nfloat phase_mie = (allow_mie ? 3.0 : 0.5 ) / (25.1327412287 ) * ((1.0 - gg) * (mumu + 1.0)) / (pow(1.0 + gg - 2.0 * mu * g, 1.5) * (2.0 + gg));\n\n// now we need to sample the 'primary' ray. this ray gathers the light that gets scattered onto it\nfor (int i = 0; i < PRIMARY_STEPS; ++i) {\n\n// calculate where we are along this ray\nvec3 pos_i = start + dir * (ray_pos_i + step_size_i);\n\n// and how high we are above the surface\nfloat height_i = length(pos_i) - planetRadius;\n\n// now calculate the density of the particles (both for rayleigh and mie)\nvec2 density = exp(-height_i / scale_height) * step_size_i;\n\n// Add these densities to the optical depth, so that we know how many particles are on this ray.\nopt_i += density;\n\n// Calculate the step size of the light ray.\n// again with a ray sphere intersect\n// a, b, c and d are already defined\na = dot(light_dir, light_dir);\nb = 2.0 * dot(light_dir, pos_i);\nc = dot(pos_i, pos_i) - atmo_radius_squared;\nd = (b * b) - 4.0 * a * c;\n\nif (d <= 0.0) d = 1.0; // not supposed to be required but this avoids the black singularity line at dusk and dawn\n\n// no early stopping, this one should always be inside the atmosphere\n// calculate the ray length\nfloat step_size_l = (-b + sqrt(d)) / (2.0 * a * float(LIGHT_STEPS));\n\n// and the position along this ray\n// this time we are sure the ray is in the atmosphere, so set it to 0\nfloat ray_pos_l = 0.0;\n\n// and the optical depth of this ray\nvec2 opt_l = vec2(0.0);\n\n// now sample the light ray\n// this is similar to what we did before\nfor (int l = 0; l < LIGHT_STEPS; ++l) {\n\n// calculate where we are along this ray\nvec3 pos_l = pos_i + light_dir * (ray_pos_l + step_size_l * 0.5);\n\n// the heigth of the position\nfloat height_l = length(pos_l) - planetRadius;\n\n// calculate the particle density, and add it\nopt_l += exp(-height_l / scale_height) * step_size_l;\n\n// and increment where we are along the light ray.\nray_pos_l += step_size_l;\n}\n\n// Now we need to calculate the attenuation\n// this is essentially how much light reaches the current sample point due to scattering\nvec3 attn = exp(-((beta_mie * (opt_i.y + opt_l.y)) + (beta_ray * (opt_i.x + opt_l.x))));\n\n// accumulate the scattered light (how much will be scattered towards the camera)\ntotal_ray += density.x * attn;\ntotal_mie += density.y * attn;\n\n// and increment the position on this ray\nray_pos_i += step_size_i;\n}\n\n// calculate how much light can pass through the atmosphere\nfloat opacity = length(exp(-((beta_mie * opt_i.y) + (beta_ray * opt_i.x)) * density_multiplier));\n\nreturn vec4((\nphase_ray * beta_ray * total_ray // rayleigh color\n+ phase_mie * beta_mie * total_mie // mie\n+ opt_i.x * beta_ambient // and ambient\n) * light_intensity, 1.0 - opacity);\n}\n#endif\n\n/*\n* Clouds rendering\n*/\n#ifdef VOLUMETRIC_CLOUDS\nfloat cloudBase_radius = (realPlanetRadius + cloudBase);\nfloat cloudBase_radius2 = (realPlanetRadius + cloudBase) + 5.0;\n\nfloat cloudThickness = (cloudTop - cloudBase);\nfloat cloudTop_radius = (cloudBase_radius + cloudThickness);\nfloat cloudTop_radius2 = (cloudBase_radius + cloudThickness) + 5.0;\n\nfloat layerPosition = 0.3; // set the layer base to 10% of the cloud height\nfloat baseThickness = cloudThickness * layerPosition;\n\nfloat layer = cloudBase + baseThickness;\n\n\nfloat twoPi = 6.2831853071795864769252;\n\nfloat hash(float p)\n{\n    p = fract(p * .1031);\n    p *= p + 33.33;\n    p *= p + p;\n    return fract(p);\n}\n\nfloat noise(in vec3 x) {\nvec3 p = floor(x);\nvec3 f = fract(x);\nf = f*f*(3.0 - 2.0*f);\n\nfloat n = p.x + p.y*157.0 + 113.0*p.z;\nreturn mix(mix(mix( hash(n+ 0.0), hash(n+ 1.0),f.x),\nmix( hash(n+157.0), hash(n+158.0),f.x),f.y),\nmix(mix( hash(n+113.0), hash(n+114.0),f.x),\nmix( hash(n+270.0), hash(n+271.0),f.x),f.y),f.z);\n}\n\n//no real reason to these values, just arbitrary numbers to add texture to clouds\nfloat noise2(in vec3 x) {\nvec3 p = floor(x);\nvec3 f = fract(x);\nf = f*f*(3.0 - 2.0*f);\n\nfloat n = p.x + p.y*157.0 + 113.0*p.z;\nreturn mix(mix(mix( hash(n+ 0.0), hash(n+ 1.0),f.x),\nmix( hash(n+147.0), hash(n+114.0),f.x),f.y),\nmix(mix( hash(n+123.0), hash(n+133.0),f.x),\nmix( hash(n+252.0), hash(n+212.0),f.x),f.y),f.z);\n}\n\nfloat fbm(\n\tvec3 pos,\n\tfloat lacunarity\n){\n\tvec3 p = pos;\n\tfloat\n\tt  = 0.51749673 * noise(p); p *= lacunarity;\n\tt += 0.25584929 * noise(p); p *= lacunarity;\n\tt += 0.12527603 * noise(p); p *= lacunarity;\n\tt += 0.06255931 * noise(p);\n\t\n\treturn t;\n}\n\n\nint lastFlooredPosition;\nfloat lastLiveCoverageValue = 0.0;\n\nfloat cloudDensity(vec3 p, vec3 offset, int lod) {\nfloat finalCoverage = cloudCover / 1.25;\n#ifdef REALTIME_CLOUDS\n\n//            //int flooredPosition = int(floor(dot(p, vec3(1.0)) / 10000.0));\n//            float factor = 50000.0;\n//            int flooredPosition = int(floor(p.x / factor)) + int(floor(p.y / factor)) + int(floor(p.z / factor));\n//            if (flooredPosition != lastFlooredPosition) {\n//                lastFlooredPosition = flooredPosition;\nvec3 sphericalNormal = normalize(p);\nvec2 positionSurfaceC = czm_ellipsoidWgs84TextureCoordinates(sphericalNormal);\nfloat sampledValue = texture2D(coverageTexture, positionSurfaceC).r;\nlastLiveCoverageValue = clamp((sampledValue - 0.3) * 10.0, 0.8, 1.0);\n//            }\n\n//float colpos = float(lastLiveCoverageValue);\n//loudBright = vec3(colpos, 0.0, 0.0);\n//cloudBright = vec3(noise(vec3(colpos)), noise(vec3(colpos * 0.1)), noise(vec3(colpos * 0.01)));\n\nfinalCoverage *= lastLiveCoverageValue;\n#endif\n\nif (finalCoverage <= 0.1) return 0.0;\n\nfloat height = length(p) - realPlanetRadius;\nfloat heightRatio;\nfloat positionResolution = 0.002;\np = p * positionResolution + offset;\n\nfloat shape = clamp(finalCoverage, 0.0, 10.0) + clamp(finalCoverage, 0.0, 10.0) * noise(p * 0.3);\n\nif (height > layer) {\nheightRatio = (height - layer) / (cloudThickness * (1.0 - layerPosition));\n}\nelse {\nheightRatio = (layer - height) / (cloudThickness * layerPosition);\n}\n\n//heightRatio *= noise(p * 0.1);\n\n// brownian noise\nfloat bn = fbm(p, 3.0);\nbn = mix(-1.5, bn, shape * shape) + 0.1;\n  \nif (height > 10000.0 && height < 10100.0) {\n  float dens = (bn / clamp(finalCoverage, 0.0, 10.0)) - (clamp(heightRatio,0.0, 1.0) * 0.01 * clamp(finalCoverage, 0.0, 10.0));\n  return sin(clamp((dens + bn), 0.0, 0.15) / finalCoverage);\n}\n\nfloat dens = (bn / finalCoverage) - (heightRatio * 4.2 * finalCoverage); // steepness of cloud border\n\n  \nreturn clamp(0.5 * (dens + bn), 0.0, 1.0);\n}\n#endif\n";
@@ -5357,7 +5172,773 @@ geofs["denoise.glsl"] = "" + 'uniform sampler2D colorTexture;\nvarying vec2 v_te
 
 geofs.fx.atmosphere.destroy();
 geofs.fx.atmosphere.create();
+let debug = !1,
+	version = "Release 2.0c";
+async function multiliveries() {
+	console.log("loading...");
+	let e, i, t = {
+			window: void 0,
+			opened: !1
+		},
+		o = !1,
+		a = 0,
+		n = !1;
+	await fetch("https://raw.githubusercontent.com/Spice9/Geofs-Multiliveries/main/dependencies/liveries.json").then((e => e.json())).then((i => e = i));
+	void 0 === window.localStorage.mlFavorites && (window.localStorage.mlFavorites = []);
+	let s = window.localStorage.mlFavorites.split(","),
+		r = document.createElement("div"),
+		l = document.createElement("i");
 
+	function c(i, t) {
+		var o = i + 1e3;
+		if (debug && console.log("Livery Change Request as '" + i + "'"), t) n = !0,
+			function(e, i) {
+				let t = new geofs.api.Canvas({
+						width: 500
+					}),
+					o = t.context,
+					a = new Image;
+				a.src = i, a.crossOrigin = "anonymous", a.onload = function() {
+					t.canvas.width = a.width, t.canvas.height = a.height, o.drawImage(a, 0, 0);
+					let n = new Image;
+					n.src = "https://138772948-227015667470610340.preview.editmysite.com/uploads/1/3/8/7/138772948/overlay__1_.png", n.crossOrigin = "anonymous", n.onload = function() {
+						o.globalAlpha = .25;
+						let a = .25 * n.width,
+							s = .25 * n.height;
+						for (let i = -Math.abs(e); i < t.canvas.height; i += s)
+							for (let r = -Math.abs(e); r < t.canvas.width; r += a) o.drawImage(n, r, i, a, s);
+						let r = t.canvas.toDataURL("image/png");
+						if (debug && console.log(r), 4140 != geofs.aircraft.instance.id) geofs.api.setModelTextureFromCanvas(geofs.aircraft.instance.definition.parts[0]["3dmodel"]._model, t, 0);
+						else {
+							if (i.toString().includes("|")) {
+								var l = i.split("|"),
+									c = l[1],
+									d = l[2];
+								geofs.api.changeModelTexture(geofs.aircraft.instance.definition.parts[0]["3dmodel"]._model, c, 2), geofs.api.changeModelTexture(geofs.aircraft.instance.definition.parts[0]["3dmodel"]._model, d, 0), i = l[0]
+							}
+							geofs.api.setModelTextureFromCanvas(geofs.aircraft.instance.definition.parts[0]["3dmodel"]._model, t, 1)
+						}
+					}
+				}
+			}(a, i), debug && console.log("livery changed to " + i);
+		else if (i = e.aircraft[i].livery, n = !1, i.toString().includes("https://")) {
+			if (4140 == geofs.aircraft.instance.id) {
+				if (i.toString().includes("|")) {
+					var s = i.split("|"),
+						r = s[1],
+						l = s[2];
+					geofs.api.changeModelTexture(geofs.aircraft.instance.definition.parts[0]["3dmodel"]._model, r, 2), geofs.api.changeModelTexture(geofs.aircraft.instance.definition.parts[0]["3dmodel"]._model, l, 0), i = s[0]
+				}
+				return void geofs.api.changeModelTexture(geofs.aircraft.instance.definition.parts[0]["3dmodel"]._model, i, 1)
+			}
+			geofs.api.changeModelTexture(geofs.aircraft.instance.definition.parts[0]["3dmodel"]._model, i, 0), debug && console.log("livery changed to " + i)
+		} else geofs.aircraft.instance.loadLivery(i), debug && console.log("livery changed to " + i);
+		geofs.aircraft.instance.liveryId = o
+	}
+	r.id = "mlButton", r.className = "mdl-button mdl-js-button", r.innerText = "Multiliveries ", l.className = "material-icons geofs-ui-bottom-icon", l.innerText = "flight_land", r.appendChild(l), r.addEventListener("click", (function() {
+		if ("object" == typeof t.window && t.window.closed && (t.opened = !1), t.opened) return ui.notification.show("Panel is open in another window"), void(debug && console.log("Duplicate open attempt"));
+		t.window = window.open("https://ariakim-taiyo.github.io/MLUI/", "_blank", "height=1000,width=1500"), setTimeout((function() {
+			t.window.postMessage({
+				type: "favorites",
+				favorites: s
+			}, "*")
+		}), 2e3), t.opened = !0, t.window && !t.window.closed && void 0 !== t.window.closed || (ui.notification.show("Please allow popups on GeoFS"), debug && console.log("No Popup Permission"), t.opened = !1)
+	})), 0 == document.getElementsByClassName("fmc-btn").length ? document.getElementsByClassName("geofs-ui-bottom")[0].appendChild(r) : document.getElementsByClassName("fmc-prog-info")[0].appendChild(r), document.querySelectorAll("[data-aircraft]").forEach((function(i) {
+		e.ids.forEach((function(e) {
+			i.dataset.aircraft.includes(e) && (i.style.background = "linear-gradient(90deg, rgba(0,212,255,1) 0%, rgba(255,255,255,1) 15%, rgba(255,255,255,1) 100%)", i.innerHTML.includes("Multiliveries") || (i.innerHTML = i.innerHTML + " [Multiliveries Frame]"))
+		}))
+	})), window.addEventListener("message", (e => {
+		if (e = e.data, debug && console.log(e), "livery" === e.type && (e.custom ? c(e.livery, !0) : c(e.livery, !1)), "vehicle" === e.type && geofs.aircraft.instance.change(e.definition, null), "invalid" === e.type) return console.log("Invalid client, please use the original code."), void ui.notification.show("Invalid client, please use the original code.");
+		"test" === e.type && t.window.postMessage({
+			type: "answer",
+			payload: multiliveries.toString()
+		}, "*"), "offset" === e.type && (a = e.offset, n && c(e.livery, !0)), "favorites" === e.type && (s = e.favorites, window.localStorage.mlFavorites = s.join())
+	})), geofs.aircraft.Aircraft.prototype.change = function(e, i, o, a) {
+		var n = this;
+		if (e = e || this.aircraftRecord.id, o = this.load(e, this.getCurrentCoordinates(), o, a), isNaN(parseInt(e)) ? n.loadLivery(i) : o.then((function() {
+				n.loadLivery(i)
+			})), void 0 !== t) return isNaN(parseInt(e)) ? (geofs.api.analytics.event("aircraft", "EXTERNAL AIRCRAFT"), o) : (geofs.api.analytics.event("aircraft", geofs.aircraftList[e].name), o)
+	}, geofs.aircraft.Aircraft.prototype.load = function(i, t, a, n) {
+		if (!isNaN(parseInt(i)) || void 0 === e) {
+			o = !1;
+			r = this;
+			var s = geofs.aircraftList[i] && geofs.aircraftList[i].local ? geofs.aircraftList[i].path + "aircraft.json" : "/models/aircraft/load.php";
+			if (void 0 === o) return;
+			return new Promise((function(e, o) {
+				r.id != i || a ? (geofs.doPause(1), r.unloadAircraft(), $.ajax(s, {
+					data: {
+						id: i,
+						kc: geofs.killCache
+					},
+					dataType: "text",
+					success: function(o, s, l) {
+						if ("error" != s) {
+							geofs.aircraftList[i] && geofs.aircraftList[i].local && (o = JSON.stringify({
+								id: i,
+								name: geofs.aircraftList[i].name,
+								fullPath: geofs.aircraftList[i].path,
+								isPremium: !1,
+								isCommunity: !1,
+								definition: btoa(o)
+							}));
+							var c = r.parseRecord(o)
+						}
+						c ? (geofs.aircraftList[i] && !geofs.aircraftList[i].local && (r.fullPath = r.aircraftRecord.fullPath), r.id = i, r.init(c, t, a, n)) : r.loadDefault("Could not load aircraft file"), e()
+					},
+					error: function(e, t, a) {
+						i != geofs.aircraft.default && r.loadDefault("Could not load aircraft file" + a), o()
+					}
+				})) : e()
+			}))
+		}
+		var r;
+		o = !0, (r = this).unloadAircraft();
+		var l = r.parseRecord(JSON.stringify({
+			id: 42069,
+			name: "EXTERNAL AIRCRAFT",
+			fullPath: "EXTERNAL AIRCRAFT",
+			isPremium: 1,
+			isCommunity: !1,
+			definition: i
+		}));
+		setTimeout((function() {
+			r.init(l, t, a, n)
+		}), 1e3)
+	}, geofs.aircraft.Aircraft.prototype.addParts = function(e, i, t, n) {
+		for (geofs.aircraft.instance.parts = {}, t = t || 1, n = 0; n < e.length; n++) {
+			var s = e[n];
+			if (s.include) {
+				var r = geofs.includes[s.include];
+				$.extend(!0, s, r[0]);
+				for (var l = 1; l < r.length; l++) {
+					var c = Object.assign({}, r[l], {
+						parent: s.name
+					});
+					c.name = s.name + c.name, e.push(c)
+				}
+			}
+			if (s.indices && 0 < s.indices) {
+				for (l = 2; l <= s.indices; l++)(c = Object.assign({}, s, {
+					indices: null
+				})).name = s.name + l, c.node += l, e.push(c);
+				s.name += "1", s.node += "1"
+			}
+		}
+		if (void 0 !== a) {
+			for (n = 0; n < e.length; n++) {
+				for ((s = e[n]).points = s.points || {}, s.type = s.type || !1, s.brakesController = s.brakesController || !1, s.animations = s.animations || [], geofs.aircraft.instance.parts[s.name] = s, geofs.aircraft.instance.addOffsets(s, t), s.forceDirection && (s.forceDirection = AXIS_TO_INDEX[s.forceDirection]), s.rotation && (s.rotation = V3.toRadians(s.rotation)), s.modelOnlyRotation && (s.modelOnlyRotation = V3.toRadians(s.modelOnlyRotation)), s.scale = s.scale || [1, 1, 1], s.scale = V3.scale(s.scale, t), s.originalScale = s.scale, 4 > geofs.version && (s.gltf2model = null), (s.model || s.gltf2model) && (r = s.gltf2model ? s.gltf2model.url : s.model.url || s.model, i && "/" != r[0] && !s.include && (r = i + r), o && (r = s.model), l = {
+						shadows: s.shadows ? window[s.shadows] : SHADOWS_ALL,
+						incrementallyLoadTextures: !1
+					}, s.gltf2model && s.gltf2model.shader && (l.customShader = geofs.api.generateShader(s.model.shader, i)), s["3dmodel"] = new geofs.api.Model(r, l), this.models.push(s["3dmodel"]._model), s.renderer && (s.rendererInstance = new instruments.Renderer(s.renderer))), s.light && (s.lightBillboard = new geofs.fx.light(null, s.light, {
+						scale: .2
+					}), geofs.aircraft.instance.lights.push(s)), s.object3d = new Object3D(s), s.suspension && (s.suspension.length ? (s.suspension.origin = [s.collisionPoints[0][0], s.collisionPoints[0][1], s.collisionPoints[0][2] + s.suspension.length], r = s.suspension.length) : (s.suspension.origin = [s.collisionPoints[0][0], s.collisionPoints[0][1], 0], r = -s.collisionPoints[0][2]), s.suspension.restLength = r, "rotation" == s.suspension.motion ? (r = V3.length(s.collisionPoints[0]), r = Math.atan2(s.collisionPoints[0][0] / r, s.collisionPoints[0][2] / r), r = {
+						type: "rotate",
+						axis: s.suspension.axis || "Y",
+						value: s.name + "Suspension",
+						ratio: (0 > r ? r + HALF_PI : r - HALF_PI) * RAD_TO_DEGREES * (s.suspension.ratio || 1)
+					}) : r = {
+						type: "translate",
+						axis: s.suspension.axis || "Z",
+						value: s.name + "Suspension",
+						ratio: s.suspension.ratio || 1
+					}, s.animations.push(r), s.suspension.hardPoint = s.suspension.hardPoint || .5, s.points.suspensionOrigin = V3.dup(s.suspension.origin), geofs.aircraft.instance.suspensions.push(s)), l = 0; l < s.animations.length; l++)(r = s.animations[l]).ratio = r.ratio || 1, r.offset = r.offset || 0, r.currentValue = null, r.delay && (r.ratio /= 1 - Math.abs(r.delay)), "rotate" == r.type && (c = r.method || "rotate", "parent" == r.frame && (c = "rotateParentFrame"), r.rotationMethod = s.object3d[c + r.axis]), "translate" == r.type && (geofs.isArray(r.axis) || (r.axis = AXIS_TO_VECTOR[r.axis]));
+				if ("wheel" == s.type && (s.radius = s.radius || 1, s.arcDegree = s.radius * TWO_PI / 360, s.angularVelocity = 0, geofs.aircraft.instance.wheels.push(s)), "airfoil" == s.type && (s.lift = 0, geofs.aircraft.instance.airfoils.push(s), s.stalls = s.stalls || !1, s.stallIncidence = s.stallIncidence || 12, s.zeroLiftIncidence = s.zeroLiftIncidence || 16, s.aspectRatio = s.aspectRatio || DEFAULT_AIRFOIL_ASPECT_RATIO, s.aspectRatioCoefficient = s.aspectRatio / s.aspectRatio + 2), "engine" == s.type && (s.rpm = 0, geofs.aircraft.instance.definition.originalInertia = geofs.aircraft.instance.definition.engineInertia, geofs.aircraft.instance.engines.push(s), s.contrail && (s.contrailEmitter = new geofs.fx.ParticleEmitter({
+						off: !0,
+						anchor: s.points.contrailAnchor,
+						duration: 1e10,
+						rate: .05,
+						life: 4e4,
+						easing: "easeOutQuart",
+						startScale: .01,
+						endScale: .01,
+						randomizeStartScale: .02,
+						randomizeEndScale: .15,
+						startOpacity: .1,
+						endOpacity: 1e-5,
+						startRotation: "random",
+						texture: "whitesmoke"
+					}))), "balloon" == s.type && (s.temperature = s.initialTemperature || 0, s.coolingSpeed = s.coolingSpeed || 0, geofs.aircraft.instance.balloons.push(s)), s.collisionPoints) {
+					for (r = s.collisionPoints, l = geofs.aircraft.instance.definition.contactProperties[s.contactType || s.type], c = 0; c < r.length; c++) r[c].part = s, r[c].contactProperties = l, geofs.aircraft.instance.collisionPoints.push(r[c]);
+					s.volume || s.buoyancy || (s.volume = "airfoil" == s.type ? this.definition.mass / (400 * r.length) : .1, s.area = s.area || 0), s.dragVector = s.dragVector || [1, 1, 1], s.dragVector = V3.scale(s.dragVector, 1 / r.length)
+				}
+				s.volume && (s.buoyancy = WATER_DENSITY * GRAVITY * s.volume), s.controller && (geofs.aircraft.instance.controllers[s.controller.name] = s.controller)
+			}
+			for (n = 0; n < e.length; n++) "root" != (s = e[n]).name && (s.parent || (s.parent = "root"), geofs.aircraft.instance.parts[s.parent].object3d.addChild(s.object3d)), s.node && (s.object3d.setModel(s.object3d.findModelInAncestry()), s.manipulator && ("string" == typeof(i = s.manipulator) && (i = geofs.aircraft.instance.aircraftRecord.isCommunity ? null : geofs.utils.getFunctionFromString(i)), i && (geofs.aircraft.instance.manipulators[s.node] = i, controls.addNodeClickHandler(s.node, (function(e) {
+				controls.manipulator = geofs.aircraft.instance.manipulators[e], controls.mouse.down = 4
+			})))))
+		}
+	};
+	setInterval((function() {
+		Object.values(multiplayer.visibleUsers).forEach((function(i) {
+			if (i.lastUpdate.st.lv > 1e3) {
+				var t = e.aircraft[i.lastUpdate.st.lv - 1e3].mptx;
+				4140 == i.aircraft ? geofs.api.changeModelTexture(i.model._model, t, 1) : geofs.api.changeModelTexture(i.model._model, t, 0)
+			}
+		}))
+	}), 1e3);
+	console.log("Loaded!"), console.log("Version: " + version), await fetch("https://raw.githubusercontent.com/Spice9/Geofs-Multiliveries/main/dependencies/contributors.txt").then((e => e.json())).then((e => i = e));
+	var d = "";
+	setTimeout((function() {
+		console.log("Code by Spice9 and AriakimTaiyo, livery contributions by:"), i.forEach((function(e) {
+			"" === d ? d += e : d = i[i.length - 1] === e ? d + ", and " + e : d + ", " + e
+		})), console.log(d)
+	}), 1e3)
+}
+multiliveries();
+let itv = setInterval(
+    function(){
+        try{
+            if(window.ui && window.flight){
+                spawnHTML();
+                clearInterval(itv);}
+
+        }catch(err){}
+    }
+    ,500);
+
+const options = {
+    method:"POST"
+}
+var listOfData;
+var challengeName
+const parkour = []
+var x = false
+var init = false
+var userName = ""
+
+const R = 6.378
+var EPSILON = 1.1102230246251565e-16
+var ERRBOUND3 = (3.0 + 16.0 * EPSILON) * EPSILON
+
+async function checkIf(testx, testy, i) {
+    var vertx = parkour[1][i].lat
+    var verty = parkour[1][i].lon
+    var polygon = []
+    var arrayLength = vertx.length;
+    for (var i2 = 0; i2 < arrayLength; i2++) {
+        polygon.push([convertX(vertx[i2], verty[i2]), convertY(vertx[i2], verty[i2])])
+    }
+    var test = []
+    test.push(convertX(testx, testy), convertY(testx, testy))
+    var res = classifyPoint(polygon, test)
+    if (res === -1) {
+        if (i === parkour[0].waypoints) {
+            end()
+            await sleep(100)
+            x = false
+            var waypointNUM = `Waypoint ${i + 1} out of ${parkour[0].waypoints + 1}`
+            var waypointnum = document.getElementById("waypointNumber")
+            waypointnum.innerHTML = waypointNUM;
+        }
+        else if (i === 0) {
+            console.log("Next waypoint, timer started")
+            averageLoops()
+            start()
+            return true
+
+        }
+        else {
+            console.log("next waypoint")
+            return true
+        }
+
+    }
+}
+function convertX(x, y) {
+    //return  x*Math.cos(y)
+    return R * Math.cos(x) * Math.cos(y)
+}
+function convertY(x, y) {
+    return R * Math.cos(x) * Math.sin(y)
+}
+
+
+async function spawnModel(i) {
+    var yPosition = (parkour[1][i].lon[3] + parkour[1][i].lon[0] + parkour[1][i].lon[2] + parkour[1][i].lon[1]) / 4
+    var xPosition = (parkour[1][i].lat[3] + parkour[1][i].lat[0] + parkour[1][i].lat[2] + parkour[1][i].lat[1]) / 4
+    var altPosition = geofs.getGroundAltitude(xPosition, yPosition).location[2] + 200
+    var La = yPosition
+    var θa = xPosition
+    var Lb = geofs.aircraft.instance.llaLocation[1]
+    var θb = geofs.aircraft.instance.llaLocation[0]
+    var coordX = (Math.cos(toRadians(θb))) * (Math.sin(toRadians(diff(Lb, La))))
+    var coordY = (Math.cos(toRadians(θa))) * (Math.sin(toRadians(θb))) - (Math.sin(toRadians(θa))) * (Math.cos(toRadians(θb))) * (Math.cos(toRadians(diff(Lb, La))))
+    var β = Math.atan2(coordX, coordY)
+    var brng = (β * 180 / Math.PI + 360) % 360
+    geofs.objects.objectList = [{
+        "location": [xPosition, yPosition, altPosition],
+        "url": "https://raw.githubusercontent.com/TotallyRealElonMusk/Geo-FS-Speed-Challenges/main/3d-models/arrow.glb",
+        "htr": [brng, 0, 0],
+        "scale": 2,
+        "options": { "shadows": 0 }, "type": 100
+    }]
+    geofs.objects.loadModels();
+}
+async function deleteModels() {
+    geofs.objects.unloadModels();
+}
+async function theLoop() {
+    var i = 0
+    x = true
+    var brng = 0
+    spawnModel(i)
+    while (x === true) {
+        var X = geofs.aircraft.instance.llaLocation[0];
+        var Y = geofs.aircraft.instance.llaLocation[1];
+        var res = await checkIf(X, Y, i)
+        if (res === true) {
+            geofs.lastFlightCoordinates = {0:geofs.aircraft.instance.llaLocation[0], 1:geofs.aircraft.instance.llaLocation[1], 2: geofs.aircraft.instance.llaLocation[2], 3: geofs.aircraft.instance.htr[0], 4: true}
+            console.log("i has been added")
+            i += 1
+            deleteModels()
+            spawnModel(i)
+            var waypointNUM = `Waypoint ${i} out of ${parkour[0].waypoints + 1}`
+            var waypointnum = document.getElementById("waypointNumber")
+            waypointnum.innerHTML = waypointNUM;
+        }
+
+        var La = Y
+        var θa = X
+        var Lb = (parkour[1][i].lon[3] + parkour[1][i].lon[0] + parkour[1][i].lon[2] + parkour[1][i].lon[1]) / 4
+        var θb = (parkour[1][i].lat[3] + parkour[1][i].lat[0] + parkour[1][i].lat[2] + parkour[1][i].lat[1]) / 4
+        var coordX = (Math.cos(toRadians(θb))) * (Math.sin(toRadians(diff(Lb, La))))
+        var coordY = (Math.cos(toRadians(θa))) * (Math.sin(toRadians(θb))) - (Math.sin(toRadians(θa))) * (Math.cos(toRadians(θb))) * (Math.cos(toRadians(diff(Lb, La))))
+        var β = Math.atan2(coordX, coordY)
+        brng = (β * 180 / Math.PI + 360) % 360
+
+
+
+        geofs.animation.values.navHDG = brng
+
+
+        if (i !== 0) {
+            setTime()
+        }
+        await sleep(5);
+    }
+}
+function setTime() {
+    if (timeExist === true) {
+        var currentTime = performance.now();
+
+        var timeDifference = currentTime - time[0]; //in ms
+
+        //timeDifference /= 1000;
+        var actualTime = Math.round(timeDifference * 100) / 100
+        var seconds = (timeDifference / 1000) % 60;
+        seconds = Math.round(seconds * 100) / 100
+        var minutes = (timeDifference-30000)/1000 / 60
+        minutes = Math.round(minutes)
+        var timeHtml = `Time: ${minutes}:${seconds}`
+        //console.log(timeHtml)
+        var timeValueDOM = document.getElementById("timeValuechallenge")
+        timeValueDOM.innerHTML = timeHtml;
+    }
+}
+function initialise() {
+    console.log("initialised")
+    theLoop()
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+const altitudeList = []
+const speedList = []
+async function averageLoops() {
+    while (x === true) {
+        var alt = geofs.relativeAltitude;
+        var speed = geofs.animation.values.kias
+        altitudeList.push(alt)
+        speedList.push(speed)
+        var averageAlt = "Your average altitude is: " + Math.round(getAltMedian())
+        var averageSpd = "Your average speed is: " + Math.round(getSpdMedian())
+        var speedValueDOM = document.getElementById("speedValue")
+        speedValueDOM.innerHTML = averageSpd;
+        var altValueDOM = document.getElementById("altValuechallenge")
+        altValueDOM.innerHTML = averageAlt;
+        await sleep(100);
+    }
+}
+
+function getAltMedian() {
+    var average = altitudeList.reduce((a, b) => a + b, 0) / altitudeList.length;
+    return average
+}
+function getSpdMedian() {
+    var average = speedList.reduce((a, b) => a + b, 0) / speedList.length;
+    return average
+}
+
+
+var endTime
+const time = []
+var timeExist = false
+async function start() {
+    time.length=0
+    var startTime = performance.now()
+    //console.log(startTime)
+    time.push(startTime)
+    timeExist = true
+
+}
+
+async function end() {
+    endTime = performance.now();
+
+    var timeDiff = endTime - time[0]; //in ms
+
+    // strip the ms
+    timeDiff /= 1000;
+
+    var averageAlt = await getAltMedian()
+    //console.log(`Average alt is ${averageAlt}`)
+    var averageSpd = await getSpdMedian()
+    //console.log(`Average speed is ${averageSpd}`)
+    var score = 10000 * ((averageAlt / 2) ** -1) * ((timeDiff/3) ** -1) * averageSpd
+    // get seconds
+    //console.log("Parkour finished, you took " + Math.round(timeDiff* 100) / 100 + " seconds");
+    var fScore = Math.round(score)
+    var finalScore = `Your score is: ${fScore}`
+    var scoreHTML = document.getElementById("score")
+    scoreHTML.innerHTML = finalScore;
+    validateScore(fScore,timeDiff)
+    //var score =
+}
+//let startInput = "q";
+//document.addEventListener("keypress", function onEvent(event) {
+//
+//    if (event.key === startInput) {
+//        if (x === false) { initialise() }
+//        else { console.log("already started") }
+//    }
+//})
+async function validateScore(fScore,timeDiff){
+    await fetch(`https://api.geofsbuildings.com/challenges/inputscore?name=${challengeName}&user=${userName}&plane=${geofs.aircraft.instance.aircraftRecord.name}&time=${timeDiff}&score=${fScore}`)
+        .then(res => res.json())
+        .then(data => listOfData = data)
+}
+async function reload() {
+    x = false
+    console.log("reloaded")
+    altitudeList.length = 0
+    speedList.length = 0
+    endTime = 0
+    time.length = 0
+    timeExist = false
+    parkour.length = 0
+}
+
+//let reloadInput = "l";
+//document.addEventListener("keypress", function onEvent(event) {
+//
+//    if (event.key === reloadInput) { reload() }
+//})
+function diff(num1, num2) {
+    //  if (num1 > num2) {
+    return num1 - num2
+    // } else {
+    //       return num2 - num1
+    // }
+}
+function toRadians(angle) {
+    return angle * (Math.PI / 180);
+}
+
+// testing here...
+async function spawnHTML() {
+    geofs.animation.values.navHDG = 0
+    var dataHTML = await createList()
+    let customBuildings = document.createElement("div");
+    customBuildings.innerHTML = '<ul class="geofs-list geofs-toggle-panel geofs-challenges-list geofs-preferences" data-noblur="true" data-onshow="{geofs.initializePreferencesPanel()}" data-onhide="{geofs.savePreferencesPanel()}"><style>#MainDIV{position:absolute;left:0;top:0;background-color:#fff;text-align:left;padding:0 0 0 10px;margin-top:2px;margin-bottom:2px}table,td,th{border:1px solid #000}#DIVtitle{color:#000;font-family:Helvetica,Arial,sans-serif;font-size:20px}</style><div id="MainDIV"><p id="DIVtitle">Geo-FS challenges page</p></p>' + dataHTML + '</p><button class="mdl-button" mdl-js-button mdl-button—raised mdl-button—colored onclick="initialiseFunction()" data-upgraded=",MaterialButton">Load JSON</button><p id="jsonStatus" style="display:inline-block"></p><p id="description"></p><button class="mdl-button" mdl-js-button mdl-button—raised mdl-button—colored onclick="secondInitialise()" data-upgraded=",MaterialButton">Start challenge</button><button class="mdl-button" mdl-js-button mdl-button—raised mdl-button—colored onclick="reloadChallenge()" data-upgraded=",MaterialButton">Reload Challenge</button><p id="startValue" style="display:inline-block"></p></ul>';
+    let sidePanel = document.getElementsByClassName("geofs-ui-left")[0];
+    document.getElementsByClassName("geofs-ui-left")[0].appendChild(customBuildings);
+    if (geofs.userRecord.role === 0){
+        userName = "foo"}
+    else{
+        userName = geofs.userRecord.callsign}
+
+    //document.getElementsByClassName("geofs-challenges-list")[0].appendChild('<div>Test</div>');
+
+
+    // Toggle Button Code
+    let buttonDiv = document.createElement("div");
+    buttonDiv.innerHTML = '<button class="mdl-button mdl-js-button geofs-f-standard-ui geofs-mediumScreenOnly" data-toggle-panel=".geofs-challenges-list" data-tooltip-classname="mdl-tooltip--top" id="landButton" tabindex="0" data-upgraded=",MaterialButton">Geo-FS Challenges</button>';
+    document.body.appendChild(buttonDiv);
+    document.getElementsByClassName("geofs-ui-bottom")[0].appendChild(buttonDiv);
+    let element = document.getElementById("landButton");
+    document.getElementsByClassName("geofs-ui-bottom")[0].insertBefore(element, buttonDiv);
+}
+
+window.initialiseFunction = async () => {
+    parkour.length = 0
+    challengeName = document.getElementById("parkourSelect").value
+    console.log(challengeName)
+    if (challengeName === '') {
+        var status = "Please select a challenge!"
+        var parkourStatus = document.getElementById("jsonStatus")
+        parkourStatus.innerHTML = status;
+    }
+    else { approveJSON(challengeName)
+          createLeaderBoard(challengeName)}
+}
+window.secondInitialise = () => {
+    if (parkour.length === 0) {
+        var status = "Please insert a JSON!"
+        var startStatus = document.getElementById("startValue")
+        startStatus.innerHTML = status;
+    }
+    else {
+        var status = ""
+        var startStatus = document.getElementById("startValue")
+        startStatus.innerHTML = status;
+        geofs.flyTo(parkour[0].spawn)
+        initialise()
+        createMapParkour()
+        createOverlay()
+        ui.panel.toggle(".geofs-map-list");
+        geofs.preferences.crashDetection = true
+
+    }
+
+}
+
+window.reloadChallenge = async () => {
+    reload()
+    var status = "Challenge reloaded"
+    var startStatus = document.getElementById("startValue")
+    startStatus.innerHTML = status;
+    await sleep(3000)
+    var status = ""
+    var startStatus = document.getElementById("startValue")
+    startStatus.innerHTML = status;
+    var timeValue = document.getElementById("timeValuechallenge")
+    timeValue.innerHTML = status;
+    var waypointStatus = document.getElementById("waypointNumber")
+    waypointStatus.innerHTML = status;
+    var speedStatus = document.getElementById("speedValue")
+    speedStatus.innerHTML = status;
+    var altStatus = document.getElementById("altValuechallenge")
+    altStatus.innerHTML = status;
+    var scoreStatus = document.getElementById("score")
+    scoreStatus.innerHTML = status;
+    var descStatus = document.getElementById("description")
+    descStatus.innerHTML = status;
+
+}
+
+async function createLeaderBoard(challengeName){
+    var leaderBoard = await createLB(challengeName)
+    try{var id = document.getElementById("scoreTable")
+    id.remove()}
+    catch(err){console.log(err)}
+    var lbHTML = '</p></p><table style="width:100%" id="scoreTable"><tr><th>Position</th><th>Name</th><th>Score</th><th>Plane</th></tr>'
+    for (let i = 0; i < 9; i++) {
+        lbHTML+= `<tr><td>${i+1}</td><td>${leaderBoard[i].name}</td><td>${leaderBoard[i].score}</td><td>${leaderBoard[i].plane}</td></tr>`
+    }
+    lbHTML+=`<tr><td>-</td><td>-</td><td>-</td><td>-</td></tr>`
+    lbHTML+=`<tr><td>${leaderBoard[10].position}</td><td>${userName}</td><td>${leaderBoard[10].score}</td><td>${leaderBoard[10].plane}</td></tr></table>`
+    var addLB = document.getElementById("startValue")
+    addLB.insertAdjacentHTML('afterend', lbHTML)
+}
+async function createLB(challengeName){
+    var leaderBoard;
+    console.log(challengeName)
+    await fetch("https://api.geofsbuildings.com/challenges/leaderboard?name="+challengeName+"&user="+userName)
+        .then(res => res.json())
+        .then(data => leaderBoard = data)
+    console.log(leaderBoard)
+    return leaderBoard
+}
+async function createOverlay() {
+    var overlayHTML = document.getElementsByClassName("cesium-credit-lightbox-overlay")
+    overlayHTML[0].insertAdjacentHTML('afterend', '<div class="cesium-performanceDisplay-defaultContainer"><div class="cesium-performanceDisplay"><div class="cesium-performanceDisplay-ms" id="timeValuechallenge"></div><div class="cesium-performanceDisplay-fps" id="waypointNumber"></div><div class="cesium-performanceDisplay-fps" id="speedValue"></div><div class="cesium-performanceDisplay-fps" id="altValuechallenge"></div><div class="cesium-performanceDisplay-fps" id="score"></div></div></div>');
+
+}
+
+async function createMapParkour() {
+    var mapPark = []
+    parkour[1].forEach(function (item, index) {
+        mapPark.push([parkour[1][index].lat.reduce((a, b) => a + b, 0) / parkour[1][index].lat.length, parkour[1][index].lon.reduce((a, b) => a + b, 0) / parkour[1][index].lon.length]);
+    });
+    geofs.api.map.setPathPoints(mapPark)
+    geofs.api.map.stopCreatePath()
+}
+
+async function editJSONHTML() {
+    var status = "JSON validated!"
+    var parkourStatus = document.getElementById("jsonStatus")
+    parkourStatus.innerHTML = status;
+    console.log(parkour)
+    await sleep(3000)
+    var status = ""
+    var parkourStatus = document.getElementById("jsonStatus")
+    parkourStatus.innerHTML = status;
+}
+
+async function createList() {
+    var listData = []
+    listData = await getList()
+    console.log(listData)
+    var listHTML = '<label for="parkourSelect">Choose your challenge from the list:</label><select name="parkourSelect" id="parkourSelect">'
+    var arrayLength = listData.length;
+    for (var i = 0; i < arrayLength; i++) {
+        listHTML += `<option value=${await encodeURIComponent(await listData[i].trim())}>${listData[i]}</option>`
+    }
+
+    listHTML += '  </select>'
+    return listHTML
+}
+
+async function getList() {
+    await fetch("https://api.geofsbuildings.com/challenges/name")
+        .then(res => res.json())
+        .then(data => listOfData = data)
+    return listOfData
+}
+
+async function approveJSON(challengeName) {
+    inputJson = await getParkour(challengeName)
+    inputJson.forEach(function (item, index) {
+        parkour.push(inputJson[index]);
+        editJSONHTML()
+    });
+    var desc = parkour[0].description
+    var parkourStatus = document.getElementById("description")
+    parkourStatus.innerHTML = desc;
+}
+async function getParkour(challengeName) {
+    await fetch("https://api.geofsbuildings.com/challenges/routes?name="+challengeName)
+        .then(res => res.json())
+        .then(data => Routes = data)
+    return Routes
+}
+
+
+//external function
+
+function orientation3(a, b, c) {
+    var l = (a[1] - c[1]) * (b[0] - c[0])
+    var r = (a[0] - c[0]) * (b[1] - c[1])
+    var det = l - r
+    var s
+    if (l > 0) {
+        if (r <= 0) {
+            return det
+        } else {
+            s = l + r
+        }
+    } else if (l < 0) {
+        if (r >= 0) {
+            return det
+        } else {
+            s = -(l + r)
+        }
+    } else {
+        return det
+    }
+    var tol = ERRBOUND3 * s
+    if (det >= tol || det <= -tol) {
+        return det
+    }
+}
+function classifyPoint(vs, point) {
+    var x = point[0]
+    var y = point[1]
+    var n = vs.length
+    var inside = 1
+    var lim = n
+    for (var i = 0, j = n - 1; i < lim; j = i++) {
+        var a = vs[i]
+        var b = vs[j]
+        var yi = a[1]
+        var yj = b[1]
+        if (yj < yi) {
+            if (yj < y && y < yi) {
+                var s = orientation3(a, b, point)
+                if (s === 0) {
+                    return 0
+                } else {
+                    inside ^= (0 < s) | 0
+                }
+            } else if (y === yi) {
+                var c = vs[(i + 1) % n]
+                var yk = c[1]
+                if (yi < yk) {
+                    var s = orientation3(a, b, point)
+                    if (s === 0) {
+                        return 0
+                    } else {
+                        inside ^= (0 < s) | 0
+                    }
+                }
+            }
+        } else if (yi < yj) {
+            if (yi < y && y < yj) {
+                var s = orientation3(a, b, point)
+                if (s === 0) {
+                    return 0
+                } else {
+                    inside ^= (s < 0) | 0
+                }
+            } else if (y === yi) {
+                var c = vs[(i + 1) % n]
+                var yk = c[1]
+                if (yk < yi) {
+                    var s = orientation3(a, b, point)
+                    if (s === 0) {
+                        return 0
+                    } else {
+                        inside ^= (s < 0) | 0
+                    }
+                }
+            }
+        } else if (y === yi) {
+            var x0 = Math.min(a[0], b[0])
+            var x1 = Math.max(a[0], b[0])
+            if (i === 0) {
+                while (j > 0) {
+                    var k = (j + n - 1) % n
+                    var p = vs[k]
+                    if (p[1] !== y) {
+                        break
+                    }
+                    var px = p[0]
+                    x0 = Math.min(x0, px)
+                    x1 = Math.max(x1, px)
+                    j = k
+                }
+                if (j === 0) {
+                    if (x0 <= x && x <= x1) {
+                        return 0
+                    }
+                    return 1
+                }
+                lim = j + 1
+            }
+            var y0 = vs[(j + n - 1) % n][1]
+            while (i + 1 < lim) {
+                var p = vs[i + 1]
+                if (p[1] !== y) {
+                    break
+                }
+                var px = p[0]
+                x0 = Math.min(x0, px)
+                x1 = Math.max(x1, px)
+                i += 1
+            }
+            if (x0 <= x && x <= x1) {
+                return 0
+            }
+            var y1 = vs[(i + 1) % n][1]
+            if (x < x0 && (y0 < y !== y1 < y)) {
+                inside ^= 1
+            }
+        }
+    }
+    return 2 * inside - 1
+}
 // ==UserScript==
 // @name         Geo-FS Extra Maritime Structures
 // @namespace    http://tampermonkey.net/
@@ -6276,19 +6857,6 @@ function turnLightsOn(_0x4b2e11) {
 function turnLightsOff(_0x55d034) {
     despawnLights(), lightsPosition = ![];
 }
-
-// ==UserScript==
-// @name         Geo-FS Pushback
-// @namespace    https://github.com/TotallyRealElonMusk/GeoFS-Pushback/new/main?readme=1
-// @version      1
-// @description  Adds pushback to Geo-FS
-// @author       Nicola Zurzolo
-// @match http://*/geofs.php*
-// @match https://*/geofs.php*
-// @run-at document-end
-// @grant        none
-// ==/UserScript==
-
 (function(_0x1de5ad, _0xf3f052) {
     const _0x37794f = _0x5694,
         _0x463e64 = _0x1de5ad();
@@ -6460,221 +7028,6 @@ function _0x1c81() {
     };
     return _0x1c81();
 }
-
-let debug = !1,
-	version = "Release 2.0c";
-async function multiliveries() {
-	console.log("loading...");
-	let e, i, t = {
-			window: void 0,
-			opened: !1
-		},
-		o = !1,
-		a = 0,
-		n = !1;
-	await fetch("https://raw.githubusercontent.com/Spice9/Geofs-Multiliveries/main/dependencies/liveries.json").then((e => e.json())).then((i => e = i));
-	void 0 === window.localStorage.mlFavorites && (window.localStorage.mlFavorites = []);
-	let s = window.localStorage.mlFavorites.split(","),
-		r = document.createElement("div"),
-		l = document.createElement("i");
-
-	function c(i, t) {
-		var o = i + 1e3;
-		if (debug && console.log("Livery Change Request as '" + i + "'"), t) n = !0,
-			function(e, i) {
-				let t = new geofs.api.Canvas({
-						width: 500
-					}),
-					o = t.context,
-					a = new Image;
-				a.src = i, a.crossOrigin = "anonymous", a.onload = function() {
-					t.canvas.width = a.width, t.canvas.height = a.height, o.drawImage(a, 0, 0);
-					let n = new Image;
-					n.src = "https://138772948-227015667470610340.preview.editmysite.com/uploads/1/3/8/7/138772948/overlay__1_.png", n.crossOrigin = "anonymous", n.onload = function() {
-						o.globalAlpha = .25;
-						let a = .25 * n.width,
-							s = .25 * n.height;
-						for (let i = -Math.abs(e); i < t.canvas.height; i += s)
-							for (let r = -Math.abs(e); r < t.canvas.width; r += a) o.drawImage(n, r, i, a, s);
-						let r = t.canvas.toDataURL("image/png");
-						if (debug && console.log(r), 4140 != geofs.aircraft.instance.id) geofs.api.setModelTextureFromCanvas(geofs.aircraft.instance.definition.parts[0]["3dmodel"]._model, t, 0);
-						else {
-							if (i.toString().includes("|")) {
-								var l = i.split("|"),
-									c = l[1],
-									d = l[2];
-								geofs.api.changeModelTexture(geofs.aircraft.instance.definition.parts[0]["3dmodel"]._model, c, 2), geofs.api.changeModelTexture(geofs.aircraft.instance.definition.parts[0]["3dmodel"]._model, d, 0), i = l[0]
-							}
-							geofs.api.setModelTextureFromCanvas(geofs.aircraft.instance.definition.parts[0]["3dmodel"]._model, t, 1)
-						}
-					}
-				}
-			}(a, i), debug && console.log("livery changed to " + i);
-		else if (i = e.aircraft[i].livery, n = !1, i.toString().includes("https://")) {
-			if (4140 == geofs.aircraft.instance.id) {
-				if (i.toString().includes("|")) {
-					var s = i.split("|"),
-						r = s[1],
-						l = s[2];
-					geofs.api.changeModelTexture(geofs.aircraft.instance.definition.parts[0]["3dmodel"]._model, r, 2), geofs.api.changeModelTexture(geofs.aircraft.instance.definition.parts[0]["3dmodel"]._model, l, 0), i = s[0]
-				}
-				return void geofs.api.changeModelTexture(geofs.aircraft.instance.definition.parts[0]["3dmodel"]._model, i, 1)
-			}
-			geofs.api.changeModelTexture(geofs.aircraft.instance.definition.parts[0]["3dmodel"]._model, i, 0), debug && console.log("livery changed to " + i)
-		} else geofs.aircraft.instance.loadLivery(i), debug && console.log("livery changed to " + i);
-		geofs.aircraft.instance.liveryId = o
-	}
-	r.id = "mlButton", r.className = "mdl-button mdl-js-button", r.innerText = "Multiliveries ", l.className = "material-icons geofs-ui-bottom-icon", l.innerText = "flight_land", r.appendChild(l), r.addEventListener("click", (function() {
-		if ("object" == typeof t.window && t.window.closed && (t.opened = !1), t.opened) return ui.notification.show("Panel is open in another window"), void(debug && console.log("Duplicate open attempt"));
-		t.window = window.open("https://ariakim-taiyo.github.io/MLUI/", "_blank", "height=1000,width=1500"), setTimeout((function() {
-			t.window.postMessage({
-				type: "favorites",
-				favorites: s
-			}, "*")
-		}), 2e3), t.opened = !0, t.window && !t.window.closed && void 0 !== t.window.closed || (ui.notification.show("Please allow popups on GeoFS"), debug && console.log("No Popup Permission"), t.opened = !1)
-	})), 0 == document.getElementsByClassName("fmc-btn").length ? document.getElementsByClassName("geofs-ui-bottom")[0].appendChild(r) : document.getElementsByClassName("fmc-prog-info")[0].appendChild(r), document.querySelectorAll("[data-aircraft]").forEach((function(i) {
-		e.ids.forEach((function(e) {
-			i.dataset.aircraft.includes(e) && (i.style.background = "linear-gradient(90deg, rgba(0,212,255,1) 0%, rgba(255,255,255,1) 15%, rgba(255,255,255,1) 100%)", i.innerHTML.includes("Multiliveries") || (i.innerHTML = i.innerHTML + " [Multiliveries Frame]"))
-		}))
-	})), window.addEventListener("message", (e => {
-		if (e = e.data, debug && console.log(e), "livery" === e.type && (e.custom ? c(e.livery, !0) : c(e.livery, !1)), "vehicle" === e.type && geofs.aircraft.instance.change(e.definition, null), "invalid" === e.type) return console.log("Invalid client, please use the original code."), void ui.notification.show("Invalid client, please use the original code.");
-		"test" === e.type && t.window.postMessage({
-			type: "answer",
-			payload: multiliveries.toString()
-		}, "*"), "offset" === e.type && (a = e.offset, n && c(e.livery, !0)), "favorites" === e.type && (s = e.favorites, window.localStorage.mlFavorites = s.join())
-	})), geofs.aircraft.Aircraft.prototype.change = function(e, i, o, a) {
-		var n = this;
-		if (e = e || this.aircraftRecord.id, o = this.load(e, this.getCurrentCoordinates(), o, a), isNaN(parseInt(e)) ? n.loadLivery(i) : o.then((function() {
-				n.loadLivery(i)
-			})), void 0 !== t) return isNaN(parseInt(e)) ? (geofs.api.analytics.event("aircraft", "EXTERNAL AIRCRAFT"), o) : (geofs.api.analytics.event("aircraft", geofs.aircraftList[e].name), o)
-	}, geofs.aircraft.Aircraft.prototype.load = function(i, t, a, n) {
-		if (!isNaN(parseInt(i)) || void 0 === e) {
-			o = !1;
-			r = this;
-			var s = geofs.aircraftList[i] && geofs.aircraftList[i].local ? geofs.aircraftList[i].path + "aircraft.json" : "/models/aircraft/load.php";
-			if (void 0 === o) return;
-			return new Promise((function(e, o) {
-				r.id != i || a ? (geofs.doPause(1), r.unloadAircraft(), $.ajax(s, {
-					data: {
-						id: i,
-						kc: geofs.killCache
-					},
-					dataType: "text",
-					success: function(o, s, l) {
-						if ("error" != s) {
-							geofs.aircraftList[i] && geofs.aircraftList[i].local && (o = JSON.stringify({
-								id: i,
-								name: geofs.aircraftList[i].name,
-								fullPath: geofs.aircraftList[i].path,
-								isPremium: !1,
-								isCommunity: !1,
-								definition: btoa(o)
-							}));
-							var c = r.parseRecord(o)
-						}
-						c ? (geofs.aircraftList[i] && !geofs.aircraftList[i].local && (r.fullPath = r.aircraftRecord.fullPath), r.id = i, r.init(c, t, a, n)) : r.loadDefault("Could not load aircraft file"), e()
-					},
-					error: function(e, t, a) {
-						i != geofs.aircraft.default && r.loadDefault("Could not load aircraft file" + a), o()
-					}
-				})) : e()
-			}))
-		}
-		var r;
-		o = !0, (r = this).unloadAircraft();
-		var l = r.parseRecord(JSON.stringify({
-			id: 42069,
-			name: "EXTERNAL AIRCRAFT",
-			fullPath: "EXTERNAL AIRCRAFT",
-			isPremium: 1,
-			isCommunity: !1,
-			definition: i
-		}));
-		setTimeout((function() {
-			r.init(l, t, a, n)
-		}), 1e3)
-	}, geofs.aircraft.Aircraft.prototype.addParts = function(e, i, t, n) {
-		for (geofs.aircraft.instance.parts = {}, t = t || 1, n = 0; n < e.length; n++) {
-			var s = e[n];
-			if (s.include) {
-				var r = geofs.includes[s.include];
-				$.extend(!0, s, r[0]);
-				for (var l = 1; l < r.length; l++) {
-					var c = Object.assign({}, r[l], {
-						parent: s.name
-					});
-					c.name = s.name + c.name, e.push(c)
-				}
-			}
-			if (s.indices && 0 < s.indices) {
-				for (l = 2; l <= s.indices; l++)(c = Object.assign({}, s, {
-					indices: null
-				})).name = s.name + l, c.node += l, e.push(c);
-				s.name += "1", s.node += "1"
-			}
-		}
-		if (void 0 !== a) {
-			for (n = 0; n < e.length; n++) {
-				for ((s = e[n]).points = s.points || {}, s.type = s.type || !1, s.brakesController = s.brakesController || !1, s.animations = s.animations || [], geofs.aircraft.instance.parts[s.name] = s, geofs.aircraft.instance.addOffsets(s, t), s.forceDirection && (s.forceDirection = AXIS_TO_INDEX[s.forceDirection]), s.rotation && (s.rotation = V3.toRadians(s.rotation)), s.modelOnlyRotation && (s.modelOnlyRotation = V3.toRadians(s.modelOnlyRotation)), s.scale = s.scale || [1, 1, 1], s.scale = V3.scale(s.scale, t), s.originalScale = s.scale, 4 > geofs.version && (s.gltf2model = null), (s.model || s.gltf2model) && (r = s.gltf2model ? s.gltf2model.url : s.model.url || s.model, i && "/" != r[0] && !s.include && (r = i + r), o && (r = s.model), l = {
-						shadows: s.shadows ? window[s.shadows] : SHADOWS_ALL,
-						incrementallyLoadTextures: !1
-					}, s.gltf2model && s.gltf2model.shader && (l.customShader = geofs.api.generateShader(s.model.shader, i)), s["3dmodel"] = new geofs.api.Model(r, l), this.models.push(s["3dmodel"]._model), s.renderer && (s.rendererInstance = new instruments.Renderer(s.renderer))), s.light && (s.lightBillboard = new geofs.fx.light(null, s.light, {
-						scale: .2
-					}), geofs.aircraft.instance.lights.push(s)), s.object3d = new Object3D(s), s.suspension && (s.suspension.length ? (s.suspension.origin = [s.collisionPoints[0][0], s.collisionPoints[0][1], s.collisionPoints[0][2] + s.suspension.length], r = s.suspension.length) : (s.suspension.origin = [s.collisionPoints[0][0], s.collisionPoints[0][1], 0], r = -s.collisionPoints[0][2]), s.suspension.restLength = r, "rotation" == s.suspension.motion ? (r = V3.length(s.collisionPoints[0]), r = Math.atan2(s.collisionPoints[0][0] / r, s.collisionPoints[0][2] / r), r = {
-						type: "rotate",
-						axis: s.suspension.axis || "Y",
-						value: s.name + "Suspension",
-						ratio: (0 > r ? r + HALF_PI : r - HALF_PI) * RAD_TO_DEGREES * (s.suspension.ratio || 1)
-					}) : r = {
-						type: "translate",
-						axis: s.suspension.axis || "Z",
-						value: s.name + "Suspension",
-						ratio: s.suspension.ratio || 1
-					}, s.animations.push(r), s.suspension.hardPoint = s.suspension.hardPoint || .5, s.points.suspensionOrigin = V3.dup(s.suspension.origin), geofs.aircraft.instance.suspensions.push(s)), l = 0; l < s.animations.length; l++)(r = s.animations[l]).ratio = r.ratio || 1, r.offset = r.offset || 0, r.currentValue = null, r.delay && (r.ratio /= 1 - Math.abs(r.delay)), "rotate" == r.type && (c = r.method || "rotate", "parent" == r.frame && (c = "rotateParentFrame"), r.rotationMethod = s.object3d[c + r.axis]), "translate" == r.type && (geofs.isArray(r.axis) || (r.axis = AXIS_TO_VECTOR[r.axis]));
-				if ("wheel" == s.type && (s.radius = s.radius || 1, s.arcDegree = s.radius * TWO_PI / 360, s.angularVelocity = 0, geofs.aircraft.instance.wheels.push(s)), "airfoil" == s.type && (s.lift = 0, geofs.aircraft.instance.airfoils.push(s), s.stalls = s.stalls || !1, s.stallIncidence = s.stallIncidence || 12, s.zeroLiftIncidence = s.zeroLiftIncidence || 16, s.aspectRatio = s.aspectRatio || DEFAULT_AIRFOIL_ASPECT_RATIO, s.aspectRatioCoefficient = s.aspectRatio / s.aspectRatio + 2), "engine" == s.type && (s.rpm = 0, geofs.aircraft.instance.definition.originalInertia = geofs.aircraft.instance.definition.engineInertia, geofs.aircraft.instance.engines.push(s), s.contrail && (s.contrailEmitter = new geofs.fx.ParticleEmitter({
-						off: !0,
-						anchor: s.points.contrailAnchor,
-						duration: 1e10,
-						rate: .05,
-						life: 4e4,
-						easing: "easeOutQuart",
-						startScale: .01,
-						endScale: .01,
-						randomizeStartScale: .02,
-						randomizeEndScale: .15,
-						startOpacity: .1,
-						endOpacity: 1e-5,
-						startRotation: "random",
-						texture: "whitesmoke"
-					}))), "balloon" == s.type && (s.temperature = s.initialTemperature || 0, s.coolingSpeed = s.coolingSpeed || 0, geofs.aircraft.instance.balloons.push(s)), s.collisionPoints) {
-					for (r = s.collisionPoints, l = geofs.aircraft.instance.definition.contactProperties[s.contactType || s.type], c = 0; c < r.length; c++) r[c].part = s, r[c].contactProperties = l, geofs.aircraft.instance.collisionPoints.push(r[c]);
-					s.volume || s.buoyancy || (s.volume = "airfoil" == s.type ? this.definition.mass / (400 * r.length) : .1, s.area = s.area || 0), s.dragVector = s.dragVector || [1, 1, 1], s.dragVector = V3.scale(s.dragVector, 1 / r.length)
-				}
-				s.volume && (s.buoyancy = WATER_DENSITY * GRAVITY * s.volume), s.controller && (geofs.aircraft.instance.controllers[s.controller.name] = s.controller)
-			}
-			for (n = 0; n < e.length; n++) "root" != (s = e[n]).name && (s.parent || (s.parent = "root"), geofs.aircraft.instance.parts[s.parent].object3d.addChild(s.object3d)), s.node && (s.object3d.setModel(s.object3d.findModelInAncestry()), s.manipulator && ("string" == typeof(i = s.manipulator) && (i = geofs.aircraft.instance.aircraftRecord.isCommunity ? null : geofs.utils.getFunctionFromString(i)), i && (geofs.aircraft.instance.manipulators[s.node] = i, controls.addNodeClickHandler(s.node, (function(e) {
-				controls.manipulator = geofs.aircraft.instance.manipulators[e], controls.mouse.down = 4
-			})))))
-		}
-	};
-	setInterval((function() {
-		Object.values(multiplayer.visibleUsers).forEach((function(i) {
-			if (i.lastUpdate.st.lv > 1e3) {
-				var t = e.aircraft[i.lastUpdate.st.lv - 1e3].mptx;
-				4140 == i.aircraft ? geofs.api.changeModelTexture(i.model._model, t, 1) : geofs.api.changeModelTexture(i.model._model, t, 0)
-			}
-		}))
-	}), 1e3);
-	console.log("Loaded!"), console.log("Version: " + version), await fetch("https://raw.githubusercontent.com/Spice9/Geofs-Multiliveries/main/dependencies/contributors.txt").then((e => e.json())).then((e => i = e));
-	var d = "";
-	setTimeout((function() {
-		console.log("Code by Spice9 and AriakimTaiyo, livery contributions by:"), i.forEach((function(e) {
-			"" === d ? d += e : d = i[i.length - 1] === e ? d + ", and " + e : d + ", " + e
-		})), console.log(d)
-	}), 1e3)
-}
-multiliveries();
-
 // ==UserScript==
 // @name Map Grid
 // @description Coordinates Grid for Map
@@ -7239,5 +7592,4 @@ L.control.mousePosition().addTo(ui.mapInstance.apiMap.map);
           });
       }
     });
-}
-
+})();
